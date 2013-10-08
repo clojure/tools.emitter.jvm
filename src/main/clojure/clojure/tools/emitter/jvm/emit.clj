@@ -494,8 +494,7 @@
         [:dup]
         [:invoke-static [:clojure.lang.Util/classOf :java.lang.Object] :java.lang.Class]
 
-        [:load-this]
-        [:get-field ~(name (frame :class)) ~(str "cached__class__" id) :java.lang.Class]
+        [:get-static ~(name (frame :class)) ~(str "cached__class__" id) :java.lang.Class]
         [:jump-insn :IF_ACMPEQ ~call-label]
 
         [:dup]
@@ -504,9 +503,7 @@
 
         [:dup]
         [:invoke-static [:clojure.lang.Util/classOf :java.lang.Object] :java.lang.Class]
-        [:load-this]
-        [:swap]
-        [:put-field ~(frame :class) ~(str "cached__class__" id) :java.lang.Class]
+        [:put-static ~(frame :class) ~(str "cached__class__" id) :java.lang.Class]
 
         [:mark ~call-label]
         ~@(emit-var v frame)
@@ -1031,17 +1028,9 @@
         protocol-callsites  (mapcat (fn [p]
                                       (let [{:keys [id]} (constants p)]
                                         [{:op   :field
-                                          :attr #{:private}
+                                          :attr #{:private :static}
                                           :name (str "cached__class__" id)
-                                          :tag  :java.lang.Class}
-                                         {:op   :field
-                                          :attr #{:private}
-                                          :name (str "cached__proto__fn__" id)
-                                          :tag  :clojure.lang.AFunction}
-                                         {:op   :field
-                                          :attr #{:private}
-                                          :name (str "cached__proto__impl__" id)
-                                          :tag  :clojure.lang.IFn}]))
+                                          :tag  :java.lang.Class}]))
                                     protocol-callsites)
 
         deftype? (= op :deftype)
