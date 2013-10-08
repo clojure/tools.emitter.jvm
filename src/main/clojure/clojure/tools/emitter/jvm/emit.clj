@@ -917,8 +917,6 @@
    [:invoke-static [:clojure.lang.RT/var :java.lang.String :java.lang.String]
     :clojure.lang.Var]])
 
-;; todo record/type, slow path
-
 (defn emit-values-as-array [list]
   `[[:push ~(int (count list))]
     [:new-array :java.lang.Object]
@@ -956,6 +954,27 @@
   `[~@(emit-value :string (str r))
     [:invoke-static [:java.util.regex.Pattern/compile :java.lang.String]
      :java.util.regex.Pattern]])
+
+(defmethod emit-value :class [_ c]
+  (if (primitive? c)
+    [[:get-static (box c) "TYPE" :java.lang.Class]]
+    [[:push (.getName ^Class c)]
+     [:invoke-static [:java.lang.Class/forName :java.lang.String] :java.lang.Class]]))
+
+(defmethod emit-value :default [_ o]
+  (try
+    (let [s (pr-str o)]
+      (when (or (not (seq s))
+                (= "#<" (subs s 0 2)))
+        (throw (ex-info "Can't emebed unreadable object in code"
+                        {:object o})))
+      [[:push s]
+       [:invoke-static [:clojure.lang.RT/readString :java.lang.String] :java.lang.Object]])
+    (catch Exception e
+      (if (instance? clojure.lang.ExceptionInfo e)
+        (throw e)
+        (throw (ex-info "Can't embed object in code"
+                        {:object o}))))))
 
 (defn emit-constants [{:keys [class constants]}]
   (mapcat (fn [{:keys [val id tag type]}]
