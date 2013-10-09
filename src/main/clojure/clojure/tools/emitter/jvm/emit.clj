@@ -12,7 +12,8 @@
             [clojure.tools.analyzer.jvm.utils :refer [primitive? numeric? box prim-or-obj] :as j.u]
             [clojure.string :as s]
             [clojure.tools.emitter.jvm.transform :as t]
-            [clojure.tools.emitter.jvm.intrinsics :refer [intrinsic intrinsic-predicate]]))
+            [clojure.tools.emitter.jvm.intrinsics :refer [intrinsic intrinsic-predicate]])
+  (:import clojure.lang.Reflector))
 
 (defmulti -emit (fn [{:keys [op]} _] op))
 (defmulti -emit-set! (fn [{:keys [op]} _] op))
@@ -960,6 +961,23 @@
     [[:get-static (box c) "TYPE" :java.lang.Class]]
     [[:push (.getName ^Class c)]
      [:invoke-static [:java.lang.Class/forName :java.lang.String] :java.lang.Class]]))
+
+(defmethod emit-value :record [_ r]
+  (let [r-class (.getName (class r))]
+   `[~@(emit-value :map r)
+     ~[:invoke-static [(keyword r-class "create") :clojure.lang.IPersistentMap] r-class]]))
+
+(defmethod emit-value :type [_ t]
+  (let [t-class (.getName (class t))
+        fields (Reflector/invokeStaticMethod t-class "getBasis" (object-array []))]
+   `[[:new-instance ~t-class]
+     [:dup]
+     ~@(mapcat (fn [field]
+                 (let [val (Reflector/getInstanceField t (name field))]
+                   (emit-value (u/classify val) val))) fields)
+     [:invoke-constructor [~(keyword t-class "<init>")
+                           ~@(repeat (count fields) :java.lang.Object)]
+      :void]]))
 
 (defmethod emit-value :default [_ o]
   (try
