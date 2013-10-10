@@ -45,14 +45,19 @@
 
 (declare type)
 (defn omit? [[pre-i & pre-a] [i & a] [post-i & post-a]]
-  (and (= :check-cast i)
-       (or
-        (and (#{:invoke-static :invoke-virtual :invoke-interface
-                :invoke-constructor :get-static :get-field} pre-i)
-             (= (type (last pre-a)) (type (first a))))
-        (and (#{:return-value :put-static :put-field} post-i)
-             (or (nil? (last post-a))
-                 (= (type (last post-a)) (type (first a))))))))
+  (when (= :check-cast i)
+    (let [check-cast (type (first a))]
+      (cond
+
+       (#{:invoke-static :invoke-virtual :invoke-interface
+          :invoke-constructor :get-static :get-field} pre-i)
+       (= (type (last pre-a)) check-cast)
+
+       (#{:put-static :put-field} post-i)
+       (= (type (last post-a)) check-cast)
+
+       :else
+       (= :return-value post-i)))))
 
 (defn transform [gen bc]
   (binding [*locals* *locals*
