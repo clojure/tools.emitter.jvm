@@ -52,9 +52,8 @@
        (#{:invoke-static :invoke-virtual :invoke-interface
           :invoke-constructor :get-static :get-field} pre-i)
        (= (type (last pre-a)) check-cast)
-
-       (#{:put-static :put-field} post-i)
-       (= (type (last post-a)) check-cast)
+       ;; (#{:put-static :put-field} post-i)
+       ;; (= (type (last post-a)) check-cast)
 
        :else
        (= :return-value post-i)))))
@@ -134,6 +133,9 @@
 (defmethod -exec :check-cast
   [_ [class] ^GeneratorAdapter gen]
   (.checkCast gen (type class)))
+
+(defmethod -exec :no-op
+  [_ _ _])
 
 (defmethod -exec :new-array
   [_ [class] ^GeneratorAdapter gen]

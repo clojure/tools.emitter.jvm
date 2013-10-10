@@ -27,12 +27,12 @@
     (cond
      (numeric? tag)
      [[:invoke-static [:clojure.lang.RT/box tag] :java.lang.Number]
-      #_[:check-cast box]]
+      [:check-cast box]]
      (= Character/TYPE tag)
      [[:invoke-static [:clojure.lang.RT/box :char] :java.lang.Character]]
      (= Boolean/TYPE tag)
      [[:invoke-static [:clojure.lang.RT/box :boolean] :java.lang.Object]
-      #_[:check-cast :java.lang.Boolean]])
+      [:check-cast :java.lang.Boolean]])
     (when (primitive? box)
       (let [method (str (.getName ^Class box) "Cast")
             tag (prim-or-obj tag)
@@ -1117,7 +1117,6 @@
                                        `[[:load-this]
                                          ~[:load-arg id]
                                          ~@(emit-cast Object bind-tag)
-                                         ;; [:check-cast tag]
                                          ~[:put-field class-name name bind-tag]])
                                      closed-overs (if meta (rest (range)) (range)))
 
