@@ -43,11 +43,27 @@
 (defmulti -compile :op)
 (defmulti -exec (fn [op _ _] op))
 
+(declare type)
+(defn omit? [[pre-i & pre-a] [i & a] [post-i & post-a]]
+  (and (= :check-cast i)
+       (or
+        (and (#{:invoke-static :invoke-virtual :invoke-interface
+                :invoke-constructor :get-static :get-field} pre-i)
+             (= (type (last pre-a)) (type (first a))))
+        (and (#{:return-value :put-static :put-field} post-i)
+             (or (nil? (last post-a))
+                 (= (type (last post-a)) (type (first a))))))))
+
 (defn transform [gen bc]
   (binding [*locals* *locals*
             *labels* *labels*]
-    (doseq [[inst & args] bc]
-      (-exec inst args gen))))
+    (loop [pre nil
+           [inst & args :as cur] (first bc)
+           bc (next bc)]
+      (when cur
+        (when-not (omit? pre cur (first bc))
+          (-exec inst args gen))
+        (recur cur (first bc) (next bc))))))
 
 (def ^:const objects (Class/forName "[Ljava.lang.Object;"))
 
