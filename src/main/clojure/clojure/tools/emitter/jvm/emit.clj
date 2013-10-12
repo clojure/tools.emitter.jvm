@@ -124,7 +124,7 @@
 
 (defn emit-constant
   [const frame c-tag]
-  (let [{:keys [id tag]} (get-in frame [:constants const])]
+  (let [{:keys [id tag]} (get-in frame [:constants [const (meta const)]])]
     ^:const
     [(case const
        (true false)
@@ -861,19 +861,29 @@
             [:var-insn (keyword (if bind-tag (.getName ^Class bind-tag)
                                     "java.lang.Object") "ISTORE") name]])])))
 
-(defmulti emit-value (fn [type value] type))
+(defmulti -emit-value (fn [type value] type))
 
-(defmethod emit-value :nil [_ _]
+(defn emit-value [t o]
+  `[~@(-emit-value t o)
+    ~@(when-let [m (and (u/obj? o)
+                        (meta o))]
+        `[[:check-cast :clojure.lang.IObj]
+          ~@(-emit-value :map m)
+          [:check-cast :clojure.lang.IPersistentMap]
+          [:invoke-interface [:clojure.lang.IObj/withMeta :clojure.lang.IPersistentMap]
+           :clojure.lang.IObj]])])
+
+(defmethod -emit-value :nil [_ _]
   [[:insn :ACONST_NULL]])
 
-(defmethod emit-value :string [_ s]
+(defmethod -emit-value :string [_ s]
   [[:push s]])
 
-(defmethod emit-value :bool [_ b]
+(defmethod -emit-value :bool [_ b]
   [[:get-static (if b :java.lang.Boolean/TRUE :java.lang.Boolean/FALSE)
     :java.lang.Boolean]])
 
-(defmethod emit-value :number [_ n]
+(defmethod -emit-value :number [_ n]
   [[:push n]
    (cond
     (instance? Long n)
@@ -894,25 +904,25 @@
     (instance? Short n)
     [:invoke-static [:java.lang.Short/valueOf :short] :java.lang.Short])])
 
-(defmethod emit-value :class [_ c]
+(defmethod -emit-value :class [_ c]
   (if (primitive? c)
     [[:get-static (box c) "TYPE" :java.lang.Class]]
     [[:push (.getName ^Class c)]
      [:invoke-static [:java.lang.Class/forName :java.lang.String] :java.lang.Class]]))
 
-(defmethod emit-value :symbol [_ s]
+(defmethod -emit-value :symbol [_ s]
   [[:push (namespace s)]
    [:push (name s)]
    [:invoke-static [:clojure.lang.Symbol/intern :java.lang.String :java.lang.String]
     :clojure.lang.Symbol]])
 
-(defmethod emit-value :keyword [_ k]
+(defmethod -emit-value :keyword [_ k]
   [[:push (namespace k)]
    [:push (name k)]
    [:invoke-static [:clojure.lang.Keyword/intern :java.lang.String :java.lang.String]
     :clojure.lang.Keyword]])
 
-(defmethod emit-value :var [_ ^clojure.lang.Var v]
+(defmethod -emit-value :var [_ ^clojure.lang.Var v]
   [[:push (str (ns-name (.ns v)))]
    [:push (name (.sym v))]
    [:invoke-static [:clojure.lang.RT/var :java.lang.String :java.lang.String]
@@ -928,46 +938,46 @@
                   [:array-store :java.lang.Object]])
               (range) list)])
 
-(defmethod emit-value :map [_ m]
+(defmethod -emit-value :map [_ m]
   (let [arr (mapcat identity m)]
     `[~@(emit-values-as-array arr)
       [:invoke-static [:clojure.lang.RT/map :objects] :clojure.lang.IPersistentMap]]))
 
-(defmethod emit-value :vector [_ v]
+(defmethod -emit-value :vector [_ v]
   `[~@(emit-values-as-array v)
     [:invoke-static [:clojure.lang.RT/vector :objects] :clojure.lang.IPersistentVector]])
 
-(defmethod emit-value :set [_ s]
+(defmethod -emit-value :set [_ s]
   `[~@(emit-values-as-array s)
     [:invoke-static [:clojure.lang.RT/set :objects] :clojure.lang.IPersistentSet]])
 
-(defmethod emit-value :seq [_ s]
+(defmethod -emit-value :seq [_ s]
   `[~@(emit-values-as-array s)
     [:invoke-static [:java.util.Arrays/asList :objects] :java.util.List]
     [:invoke-static [:clojure.lang.PersistentList/create :java.util.List]
      :clojure.lang.IPersistentList]])
 
-(defmethod emit-value :char [_ c]
+(defmethod -emit-value :char [_ c]
   [[:push c]
    [:invoke-static [:java.lang.Character/valueOf :char] :java.lang.Character]])
 
-(defmethod emit-value :regex [_ r]
+(defmethod -emit-value :regex [_ r]
   `[~@(emit-value :string (str r))
     [:invoke-static [:java.util.regex.Pattern/compile :java.lang.String]
      :java.util.regex.Pattern]])
 
-(defmethod emit-value :class [_ c]
+(defmethod -emit-value :class [_ c]
   (if (primitive? c)
     [[:get-static (box c) "TYPE" :java.lang.Class]]
     [[:push (.getName ^Class c)]
      [:invoke-static [:java.lang.Class/forName :java.lang.String] :java.lang.Class]]))
 
-(defmethod emit-value :record [_ r]
+(defmethod -emit-value :record [_ r]
   (let [r-class (.getName (class r))]
    `[~@(emit-value :map r)
      ~[:invoke-static [(keyword r-class "create") :clojure.lang.IPersistentMap] r-class]]))
 
-(defmethod emit-value :type [_ t]
+(defmethod -emit-value :type [_ t]
   (let [t-class (.getName (class t))
         fields (Reflector/invokeStaticMethod t-class "getBasis" (object-array []))]
    `[[:new-instance ~t-class]
@@ -979,7 +989,7 @@
                            ~@(repeat (count fields) :java.lang.Object)]
       :void]]))
 
-(defmethod emit-value :default [_ o]
+(defmethod -emit-value :default [_ o]
   (try
     (let [s (pr-str o)]
       (when (or (not (seq s))
