@@ -1277,7 +1277,7 @@
           [:dup]
           ~@(when meta
               [[:insn :ACONST_NULL]])
-          ~@(mapcat #(emit (assoc % :op :local :tag Object) old-frame)
+          ~@(mapcat #(emit (assoc % :op :local) old-frame)
                     closed-overs) ;; need to clear?
           [:invoke-constructor [~(keyword class-name "<init>")
                                 ~@ctor-types] :void]]
