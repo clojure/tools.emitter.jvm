@@ -124,7 +124,7 @@
 
 (defn emit-constant
   [const frame c-tag]
-  (let [{:keys [id tag]} (get-in frame [:constants [const (meta const)]])]
+  (let [{:keys [id tag]} (get-in frame [:constants [const (meta const) c-tag]])]
     ^:const
     [(case const
        (true false)
