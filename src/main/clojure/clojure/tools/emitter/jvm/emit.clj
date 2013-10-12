@@ -984,7 +984,7 @@
     (let [s (pr-str o)]
       (when (or (not (seq s))
                 (= "#<" (subs s 0 2)))
-        (throw (ex-info "Can't emebed unreadable object in code"
+        (throw (ex-info "Can't embed unreadable object in code"
                         {:object o})))
       [[:push s]
        [:invoke-static [:clojure.lang.RT/readString :java.lang.String] :java.lang.Object]])
