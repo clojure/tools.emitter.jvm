@@ -986,7 +986,7 @@
                  (let [val (Reflector/getInstanceField t (name field))]
                    (emit-value (u/classify val) val))) fields)
      [:invoke-constructor [~(keyword t-class "<init>")
-                           ~@(repeat (count fields) :java.lang.Object)]
+                           ~@(mapv (comp j.u/maybe-class :tag meta) fields)]
       :void]]))
 
 (defmethod -emit-value :default [_ o]
@@ -1083,20 +1083,21 @@
         deftype? (= op :deftype)
         defrecord? (contains? closed-overs '__meta)
 
-        closed-overs (mapv (fn [{:keys [name bind-tag mutable] :as local}]
-                             (merge local
+        closed-overs (mapv (fn [{:keys [name local bind-tag tag mutable] :as l}]
+                             (merge l
                                     {:op   :field
                                      :attr (when deftype?
                                              (if mutable
                                                #{mutable}
                                                #{:public :final}))
-                                     :tag  (or bind-tag Object)}))
+                                     :tag  (or bind-tag (when (= :field local) tag)
+                                               Object)}))
                            (if deftype?
                              fields
                              (vals closed-overs)))
 
         ctor-types (into (if meta [:clojure.lang.IPersistentMap] [])
-                         (repeat (count closed-overs) :java.lang.Object))
+                         (mapv :tag closed-overs))
 
         class-ctors [{:op     :method
                       :attr   #{:public :static}
@@ -1123,11 +1124,10 @@
                                        [:load-arg 0]
                                        [:put-field class-name :__meta :clojure.lang.IPersistentMap]])
                                   ~@(mapcat
-                                     (fn [{:keys [name bind-tag]} id]
+                                     (fn [{:keys [name tag]} id]
                                        `[[:load-this]
                                          ~[:load-arg id]
-                                         ~@(emit-cast Object bind-tag)
-                                         ~[:put-field class-name name bind-tag]])
+                                         ~[:put-field class-name name tag]])
                                      closed-overs (if meta (rest (range)) (range)))
 
                                   [:label ~end-label]
@@ -1213,7 +1213,7 @@
                                    [:return-value]
                                    [:end-method]]}])
 
-        deftype-fields (vec (remove '#{__meta __extmap} (mapv :name closed-overs)))
+        deftype-fields (vec (remove '#{__meta __extmap} (mapv :form closed-overs)))
 
         deftype-methods (when deftype?
                           `[~{:op     :method
