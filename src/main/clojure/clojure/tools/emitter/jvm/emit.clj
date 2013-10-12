@@ -991,7 +991,7 @@
 
 (defmethod -emit-value :default [_ o]
   (try
-    (let [s (pr-str o)]
+    (let [s (binding [*print-dup* true] (pr-str o))]
       (when (or (not (seq s))
                 (= "#<" (subs s 0 2)))
         (throw (ex-info "Can't embed unreadable object in code"
