@@ -1169,7 +1169,7 @@
         meta-methods (when meta
                        [{:op     :method
                          :attr   #{:public}
-                         :method `[[:<init> ~@(butlast ctor-types)] :void]
+                         :method `[[:<init> ~@(rest ctor-types)] :void]
                          :code   `[[:start-method]
                                    [:load-this]
                                    [:insn :ACONST_NULL]
