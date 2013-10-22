@@ -198,10 +198,24 @@
               (range) list)])
 
 (defmethod -emit :map
-  [{:keys [keys vals]} frame]
-  (conj
-   (emit-as-array (interleave keys vals) frame)
-   [:invoke-static [:clojure.lang.RT/mapUniqueKeys :objects] :clojure.lang.IPersistentMap]))
+  [{:keys [keys vals tag const]} frame]
+  (if const
+
+    `[~@(emit-constant const frame tag)
+      [:invoke-interface [:clojure.lang.IEditableCollection/asTransient] :clojure.lang.ITransientCollection]
+      ~@(mapcat (fn [k v]
+                  (when (or (not (:literal? k))
+                            (not (:literal? v)))
+                    `[~@(emit k frame)
+                      ~@(emit v frame)
+                      [:invoke-interface [:clojure.lang.ITransientMap/assoc
+                                          :java.lang.Object :java.lang.Object]
+                       :clojure.lang.ITransientMap]])) keys vals)
+      [:invoke-interface [:clojure.lang.ITransientMap/persistent] :clojure.lang.IPersistentMap]]
+
+    (conj
+     (emit-as-array (interleave keys vals) frame)
+     [:invoke-static [:clojure.lang.RT/mapUniqueKeys :objects] :clojure.lang.IPersistentMap])))
 
 (defmethod -emit :vector
   [{:keys [items]} frame]
@@ -210,10 +224,22 @@
    [:invoke-static [:clojure.lang.RT/vector :objects] :clojure.lang.IPersistentVector]))
 
 (defmethod -emit :set
-  [{:keys [items]} frame]
-  (conj
-   (emit-as-array items frame)
-   [:invoke-static [:clojure.lang.RT/set :objects] :clojure.lang.IPersistentSet]))
+  [{:keys [items const tag]} frame]
+  (if const
+
+    `[~@(emit-constant const frame tag)
+      [:invoke-interface [:clojure.lang.IEditableCollection/asTransient] :clojure.lang.ITransientCollection]
+
+      ~@(mapcat (fn [item]
+                  `[~@(emit item frame)
+                    [:invoke-interface [:clojure.lang.ITransientCollection/conj :java.lang.Object] :clojure.lang.ITransientCollection]])
+                (remove :literal? items))
+      [:invoke-interface [:clojure.lang.ITransientCollection/persistent] :clojure.lang.IPersistentCollection]
+      [:check-cast :clojure.lang.IPersistentSet]]
+
+    (conj
+     (emit-as-array items frame)
+     [:invoke-static [:clojure.lang.RT/set :objects] :clojure.lang.IPersistentSet])))
 
 (defmethod -emit :with-meta
   [{:keys [meta expr]} frame]
