@@ -7,7 +7,7 @@
 ;;   You must not remove this notice, or any other, from this software.
 
 (ns clojure.tools.emitter.jvm
-  (:refer-clojure :exclude [eval])
+  (:refer-clojure :exclude [eval macroexpand-1])
   (:require [clojure.tools.analyzer.jvm :as a]
             [clojure.tools.analyzer :refer [macroexpand-1]]
             [clojure.tools.emitter.jvm.emit :as e])
