@@ -85,7 +85,7 @@
 (defmethod -emit :throw
   [{:keys [exception]} frame]
   `^:untyped
-  [~@(emit (assoc exception :tag :java.lang.Throwable) frame)
+  [~@(emit (assoc exception :tag java.lang.Throwable) frame)
    [:throw-exception]])
 
 (defmethod -emit :monitor-enter
@@ -176,7 +176,7 @@
          [:invoke-virtual [:clojure.lang.Var/setDynamic :boolean] :clojure.lang.Var]])
     ~@(when meta
         `[[:dup]
-          ~@(emit (assoc meta :tag :clojure.lang.IPersistentMap) frame)
+          ~@(emit (assoc meta :tag clojure.lang.IPersistentMap) frame)
           [:invoke-virtual [:clojure.lang.Var/setMeta :clojure.lang.IPersistentMap] :void]])
     ~@(when init
         `[[:dup]
@@ -218,8 +218,8 @@
 (defmethod -emit :with-meta
   [{:keys [meta expr]} frame]
   (into
-   (emit (assoc expr :tag :clojure.lang.IObj) frame)
-   `[~@(emit (assoc meta :tag :clojure.lang.IPersistentMap) frame)
+   (emit (assoc expr :tag clojure.lang.IObj) frame)
+   `[~@(emit (assoc meta :tag clojure.lang.IPersistentMap) frame)
      [:invoke-interface [:clojure.lang.IObj/withMeta :clojure.lang.IPersistentMap]
       :clojure.lang.IObj]]))
 
@@ -1058,18 +1058,18 @@
                      [{:op   :field
                        :attr #{:public :final}
                        :name "__meta"
-                       :tag  :clojure.lang.IPersistentMap}])
+                       :tag  clojure.lang.IPersistentMap}])
 
         keyword-callsites (mapcat (fn [k]
                                     (let [{:keys [id]} (k constants)]
                                       [{:op   :field
                                         :attr #{:public :final :static}
                                         :name (str "site__" id)
-                                        :tag  :clojure.lang.KeywordLookupSite}
+                                        :tag  clojure.lang.KeywordLookupSite}
                                        {:op   :field
                                         :attr #{:public :final :static}
                                         :name (str "thunk__" id)
-                                        :tag  :clojure.lang.ILookupThunk}]))
+                                        :tag  clojure.lang.ILookupThunk}]))
                                   keyword-callsites)
 
         protocol-callsites  (mapcat (fn [p]
@@ -1077,7 +1077,7 @@
                                         [{:op   :field
                                           :attr #{:private :static}
                                           :name (str "cached__class__" id)
-                                          :tag  :java.lang.Class}]))
+                                          :tag  java.lang.Class}]))
                                     protocol-callsites)
 
         deftype? (= op :deftype)
