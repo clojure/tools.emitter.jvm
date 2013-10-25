@@ -198,10 +198,12 @@
               (range) list)])
 
 (defmethod -emit :map
-  [{:keys [keys vals]} frame]
-  (conj
-   (emit-as-array (interleave keys vals) frame)
-   [:invoke-static [:clojure.lang.RT/mapUniqueKeys :objects] :clojure.lang.IPersistentMap]))
+  [{:keys [keys vals form]} frame]
+  `[~@(emit-as-array (interleave keys vals) frame)
+    ~@(if (sorted? form)
+        [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
+         [:invoke-static [:clojure.lang.PersistentTreeMap/create :clojure.lang.ISeq] :clojure.lang.PersistentTreeMap]]
+        [[:invoke-static [:clojure.lang.RT/map :objects] :clojure.lang.IPersistentMap]])])
 
 (defmethod -emit :vector
   [{:keys [items]} frame]
@@ -210,10 +212,12 @@
    [:invoke-static [:clojure.lang.RT/vector :objects] :clojure.lang.IPersistentVector]))
 
 (defmethod -emit :set
-  [{:keys [items]} frame]
-  (conj
-   (emit-as-array items frame)
-   [:invoke-static [:clojure.lang.RT/set :objects] :clojure.lang.IPersistentSet]))
+  [{:keys [items form]} frame]
+  `[~@(emit-as-array items frame)
+    ~@(if (sorted? form)
+        [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
+         [:invoke-static [:clojure.lang.PersistentTreeSet/create :clojure.lang.ISeq] :clojure.lang.PersistentTreeSet]]
+        [[:invoke-static [:clojure.lang.RT/set :objects] :clojure.lang.IPersistentSet]])])
 
 (defmethod -emit :with-meta
   [{:keys [meta expr]} frame]
@@ -941,7 +945,10 @@
 (defmethod -emit-value :map [_ m]
   (let [arr (mapcat identity m)]
     `[~@(emit-values-as-array arr)
-      [:invoke-static [:clojure.lang.RT/map :objects] :clojure.lang.IPersistentMap]]))
+      ~@(if (sorted? m)
+         [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
+          [:invoke-static [:clojure.lang.PersistentTreeMap/create :clojure.lang.ISeq] :clojure.lang.PersistentTreeMap]]
+         [[:invoke-static [:clojure.lang.RT/map :objects] :clojure.lang.IPersistentMap]])]))
 
 (defmethod -emit-value :vector [_ v]
   `[~@(emit-values-as-array v)
@@ -949,7 +956,10 @@
 
 (defmethod -emit-value :set [_ s]
   `[~@(emit-values-as-array s)
-    [:invoke-static [:clojure.lang.RT/set :objects] :clojure.lang.IPersistentSet]])
+    ~@(if (sorted? s)
+        [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
+         [:invoke-static [:clojure.lang.PersistentTreeSet/create :clojure.lang.ISeq] :clojure.lang.PersistentTreeSet]]
+        [[:invoke-static [:clojure.lang.RT/set :objects] :clojure.lang.IPersistentSet]])])
 
 (defmethod -emit-value :seq [_ s]
   `[~@(emit-values-as-array s)
