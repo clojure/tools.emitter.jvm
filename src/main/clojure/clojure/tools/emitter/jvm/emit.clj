@@ -67,7 +67,7 @@
                      [[:pop2]]
                      [[:pop]]))))
          (into bytecode
-               `[~@(when (= :untyped m)
+               `[~@(when (:untyped m)
                      [[:insn :ACONST_NULL]])
                  ~@(when (and tag ret-tag
                               (not= tag ret-tag))
