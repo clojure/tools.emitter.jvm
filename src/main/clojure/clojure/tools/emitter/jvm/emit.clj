@@ -788,12 +788,12 @@
 
 ;; addAnnotations
 (defmethod -emit :method
-  [{:keys [this  methods args name bridges tag fixed-arity variadic? body env]}
+  [{:keys [this methods params name bridges tag fixed-arity variadic? body env]}
    {:keys [class] :as frame}]
 
   (let [method-name name
         return-type tag
-        arg-types (mapv :tag args)
+        arg-types (mapv :tag params)
         [loop-label end-label] (repeatedly label)
 
         code
@@ -801,7 +801,7 @@
           ~[:local-variable (:name this) class nil loop-label end-label (:name this)]
           ~@(mapv (fn [{:keys [tag name]}]
                     [:local-variable name tag nil loop-label end-label name])
-                  args)
+                  params)
           [:mark ~loop-label]
           ~@(emit-line-number env loop-label)
           ~@(emit (assoc body
@@ -809,7 +809,7 @@
                     :ret-tag (or (:tag body) Object))
                   (assoc frame
                     :loop-label  loop-label
-                    :loop-locals args))
+                    :loop-locals params))
           [:mark ~end-label]
           [:return-value]
           [:end-method]]]
