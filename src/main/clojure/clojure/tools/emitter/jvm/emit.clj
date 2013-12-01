@@ -724,9 +724,9 @@
                 `[~@(emit arg frame)
                   ~(if (= :arg local)
                      [:store-arg (:arg-id binding)]
-                     [:var-insn ~(keyword (if tag (.getName ^Class tag)
-                                              "java.lang.Object") "ISTORE")
-                      ~name])]) exprs loop-locals)
+                     [:var-insn (keyword (if tag (.getName ^Class tag)
+                                             "java.lang.Object") "ISTORE")
+                      name])]) exprs loop-locals)
     [:go-to ~loop-label]])
 
 (defmethod -emit :fn-method
