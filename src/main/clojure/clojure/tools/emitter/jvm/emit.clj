@@ -720,7 +720,7 @@
 
 (defmethod -emit :recur
   [{:keys [exprs]} {:keys [loop-label loop-locals] :as frame}]
-  `[~@(mapcat (fn [{:keys [local name tag] :as arg} binding]
+  `[~@(mapcat (fn [{:keys [local tag] :as arg} {:keys [name arg-id] :as binding}]
                 `[~@(emit arg frame)
                   ~(if (= :arg local)
                      [:store-arg (:arg-id binding)]
