@@ -325,10 +325,10 @@
 (defmethod -emit-set! :static-field
   [{:keys [target val env]} frame]
   (let [{:keys [ret-tag class field]} target]
-   `[~@(emit-line-number env)
-     ~@(emit (assoc val :tag ret-tag) frame)
-     ~(dup ret-tag)
-     ~[:put-static class field ret-tag]]))
+    `[~@(emit-line-number env)
+      ~@(emit (assoc val :tag ret-tag) frame)
+      ~(dup ret-tag)
+      ~[:put-static class field ret-tag]]))
 
 (defmethod -emit :instance-field
   [{:keys [instance class field env ret-tag]} frame]
@@ -340,11 +340,11 @@
 (defmethod -emit-set! :instance-field
   [{:keys [target val env]} frame]
   (let [{:keys [instance class field ret-tag]} target]
-   `[~@(emit-line-number env)
-     ~@(emit (assoc instance :tag class) frame)
-     ~@(emit (assoc val :tag ret-tag) frame)
-     ~(dup-x1 ret-tag)
-     ~[:put-field class field ret-tag]]))
+    `[~@(emit-line-number env)
+      ~@(emit (assoc instance :tag class) frame)
+      ~@(emit (assoc val :tag ret-tag) frame)
+      ~(dup-x1 ret-tag)
+      ~[:put-field class field ret-tag]]))
 
 (defmethod -emit :keyword-invoke
   [{:keys [env fn args] :as ast} frame]
@@ -490,41 +490,41 @@
 (defmethod -emit :protocol-invoke
   [{:keys [fn args env]} frame]
   (let [[on-label call-label end-label] (repeatedly label)
-          v (:var fn)
-          [target & args] args
-          id (:id fn)
+        v (:var fn)
+        [target & args] args
+        id (:id fn)
 
-          ^Class pinterface (:on-interface @(:protocol (meta v)))]
-      `[~@(emit target frame)
-        [:dup]
-        [:invoke-static [:clojure.lang.Util/classOf :java.lang.Object] :java.lang.Class]
+        ^Class pinterface (:on-interface @(:protocol (meta v)))]
+    `[~@(emit target frame)
+      [:dup]
+      [:invoke-static [:clojure.lang.Util/classOf :java.lang.Object] :java.lang.Class]
 
-        [:get-static ~(name (frame :class)) ~(str "cached__class__" id) :java.lang.Class]
-        [:jump-insn :IF_ACMPEQ ~call-label]
+      [:get-static ~(name (frame :class)) ~(str "cached__class__" id) :java.lang.Class]
+      [:jump-insn :IF_ACMPEQ ~call-label]
 
-        [:dup]
-        [:instance-of ~pinterface]
-        [:if-z-cmp :NE ~on-label]
+      [:dup]
+      [:instance-of ~pinterface]
+      [:if-z-cmp :NE ~on-label]
 
-        [:dup]
-        [:invoke-static [:clojure.lang.Util/classOf :java.lang.Object] :java.lang.Class]
-        [:put-static ~(frame :class) ~(str "cached__class__" id) :java.lang.Class]
+      [:dup]
+      [:invoke-static [:clojure.lang.Util/classOf :java.lang.Object] :java.lang.Class]
+      [:put-static ~(frame :class) ~(str "cached__class__" id) :java.lang.Class]
 
-        [:mark ~call-label]
-        ~@(emit-var v frame)
-        [:invoke-virtual [:clojure.lang.Var/getRawRoot] :java.lang.Object]
-        [:swap]
-        ~@(emit-args-and-invoke args frame true)
-        [:go-to ~end-label]
+      [:mark ~call-label]
+      ~@(emit-var v frame)
+      [:invoke-virtual [:clojure.lang.Var/getRawRoot] :java.lang.Object]
+      [:swap]
+      ~@(emit-args-and-invoke args frame true)
+      [:go-to ~end-label]
 
-        [:mark ~on-label]
+      [:mark ~on-label]
 
-        ~@(mapcat #(emit % frame) args)
-        [:invoke-interface [~(keyword (.getName pinterface)
-                                      (munge (str (:name fn))))
-                            ~@(repeat (count args) :java.lang.Object)] :java.lang.Object]
+      ~@(mapcat #(emit % frame) args)
+      [:invoke-interface [~(keyword (.getName pinterface)
+                                    (munge (str (:name fn))))
+                          ~@(repeat (count args) :java.lang.Object)] :java.lang.Object]
 
-        [:mark ~end-label]]))
+      [:mark ~end-label]]))
 
 (defmethod -emit :prim-invoke
   [{:keys [fn args ^Class prim-interface arg-tags ret-tag]} frame]
@@ -765,26 +765,26 @@
 
     ;; should emit typed only when there's an interface, otherwise it's useless
 
-      `[~{:op     :method
-          :attr   #{:public}
-          :method [(into [method-name] arg-tags) return-type]
-          :code   code}
-        ~@(when primitive?
-            [{:op        :method
-              :attr      #{:public}
-              :interface prim-interface
-              :method    [(into [:invoke] (repeat (count params) :java.lang.Object))
-                          :java.lang.Object]
-              :code      `[[:start-method]
-                           [:load-this]
-                           ~@(mapcat (fn [{:keys [tag]} id]
-                                       `[~[:load-arg id]
-                                         ~@(emit-cast Object tag)])
-                                     params (range))
-                           ~[:invoke-virtual (into [(keyword class "invokePrim")] arg-tags) return-type]
-                           ~@(emit-cast return-type Object)
-                           [:return-value]
-                           [:end-method]]}])]))
+    `[~{:op     :method
+        :attr   #{:public}
+        :method [(into [method-name] arg-tags) return-type]
+        :code   code}
+      ~@(when primitive?
+          [{:op        :method
+            :attr      #{:public}
+            :interface prim-interface
+            :method    [(into [:invoke] (repeat (count params) :java.lang.Object))
+                        :java.lang.Object]
+            :code      `[[:start-method]
+                         [:load-this]
+                         ~@(mapcat (fn [{:keys [tag]} id]
+                                     `[~[:load-arg id]
+                                       ~@(emit-cast Object tag)])
+                                   params (range))
+                         ~[:invoke-virtual (into [(keyword class "invokePrim")] arg-tags) return-type]
+                         ~@(emit-cast return-type Object)
+                         [:return-value]
+                         [:end-method]]}])]))
 
 ;; addAnnotations
 (defmethod -emit :method
@@ -819,16 +819,16 @@
         :method [(into [method-name] arg-types) return-type]
         :code   code}
       ~@(let [target [(into [(keyword class (str method-name))] arg-types) return-type]]
-         (for [{:keys [name parameter-types return-type]} bridges]
-           {:op :method
-            :attr #{:public :bridge}
-            :method [(into [method-name] parameter-types) return-type]
-            :code `[[:start-method]
-                    [:load-this]
-                    [:load-args]
-                    [:invoke-virtual ~@target]
-                    [:return-value]
-                    [:end-method]]}))]))
+          (for [{:keys [name parameter-types return-type]} bridges]
+            {:op :method
+             :attr #{:public :bridge}
+             :method [(into [method-name] parameter-types) return-type]
+             :code `[[:start-method]
+                     [:load-this]
+                     [:load-args]
+                     [:invoke-virtual ~@target]
+                     [:return-value]
+                     [:end-method]]}))]))
 
 (defmethod -emit :local
   [{:keys [to-clear? local name tag bind-tag arg-id]}
@@ -946,9 +946,9 @@
   (let [arr (mapcat identity m)]
     `[~@(emit-values-as-array arr)
       ~@(if (sorted? m)
-         [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
-          [:invoke-static [:clojure.lang.PersistentTreeMap/create :clojure.lang.ISeq] :clojure.lang.PersistentTreeMap]]
-         [[:invoke-static [:clojure.lang.RT/map :objects] :clojure.lang.IPersistentMap]])]))
+          [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
+           [:invoke-static [:clojure.lang.PersistentTreeMap/create :clojure.lang.ISeq] :clojure.lang.PersistentTreeMap]]
+          [[:invoke-static [:clojure.lang.RT/map :objects] :clojure.lang.IPersistentMap]])]))
 
 (defmethod -emit-value :vector [_ v]
   `[~@(emit-values-as-array v)
@@ -984,20 +984,20 @@
 
 (defmethod -emit-value :record [_ r]
   (let [r-class (.getName (class r))]
-   `[~@(emit-value :map r)
-     ~[:invoke-static [(keyword r-class "create") :clojure.lang.IPersistentMap] r-class]]))
+    `[~@(emit-value :map r)
+      ~[:invoke-static [(keyword r-class "create") :clojure.lang.IPersistentMap] r-class]]))
 
 (defmethod -emit-value :type [_ t]
   (let [t-class (.getName (class t))
         fields (Reflector/invokeStaticMethod t-class "getBasis" (object-array []))]
-   `[[:new-instance ~t-class]
-     [:dup]
-     ~@(mapcat (fn [field]
-                 (let [val (Reflector/getInstanceField t (name field))]
-                   (emit-value (u/classify val) val))) fields)
-     [:invoke-constructor [~(keyword t-class "<init>")
-                           ~@(mapv (comp j.u/maybe-class :tag meta) fields)]
-      :void]]))
+    `[[:new-instance ~t-class]
+      [:dup]
+      ~@(mapcat (fn [field]
+                  (let [val (Reflector/getInstanceField t (name field))]
+                    (emit-value (u/classify val) val))) fields)
+      [:invoke-constructor [~(keyword t-class "<init>")
+                            ~@(mapv (comp j.u/maybe-class :tag meta) fields)]
+       :void]]))
 
 (defmethod -emit-value :default [_ o]
   (try
@@ -1146,16 +1146,16 @@
 
         defrecord-ctor (when defrecord?
                          [{:op     :method
-                            :attr   #{:public}
-                            :method `[[:<init> ~@(drop-last 2 ctor-types)] :void]
-                            :code   `[[:start-method]
-                                      [:load-this]
-                                      [:load-args]
-                                      [:insn :ACONST_NULL]
-                                      [:insn :ACONST_NULL]
-                                      [:invoke-constructor [~(keyword class-name "<init>") ~@ctor-types] :void]
-                                      [:return-value]
-                                      [:end-method]]}])
+                           :attr   #{:public}
+                           :method `[[:<init> ~@(drop-last 2 ctor-types)] :void]
+                           :code   `[[:start-method]
+                                     [:load-this]
+                                     [:load-args]
+                                     [:insn :ACONST_NULL]
+                                     [:insn :ACONST_NULL]
+                                     [:invoke-constructor [~(keyword class-name "<init>") ~@ctor-types] :void]
+                                     [:return-value]
+                                     [:end-method]]}])
 
         kw-callsite-method (when-let [kw-cs (seq (frame :keyword-callsites))]
                              (let [cs-count (count kw-cs)
