@@ -6,8 +6,8 @@ Because currently development is concentrated on the tools.analyzer[.jvm] librar
 
 ## SPONSORSHIP
 
-# Cognitect (http://cognitect.com/) is sponsoring tools.emitter.jvm development (https://groups.google.com/d/msg/clojure/iaP16MHpX0E/EMtnGmOz-rgJ)
-# Ambrose BS (https://twitter.com/ambrosebs) has sponsored tools.emitter.jvm development in his typed clojure campaign (http://www.indiegogo.com/projects/typed-clojure).
+* Cognitect (http://cognitect.com/) is sponsoring tools.emitter.jvm development (https://groups.google.com/d/msg/clojure/iaP16MHpX0E/EMtnGmOz-rgJ)
+* Ambrose BS (https://twitter.com/ambrosebs) has sponsored tools.emitter.jvm development in his typed clojure campaign (http://www.indiegogo.com/projects/typed-clojure).
 
 ## Releases and Dependency Information
 
