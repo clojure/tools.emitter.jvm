@@ -124,7 +124,7 @@
 
 (defn emit-constant
   [const frame c-tag]
-  (let [{:keys [id tag]} (get-in frame [:constants [const (meta const) c-tag]])]
+  (let [{:keys [id tag]} (get-in frame [:constants {:form const :meta (meta const) :tag c-tag}])]
     ^:const
     [(case const
        (true false)
@@ -1024,7 +1024,7 @@
 (defn emit-keyword-callsites
   [{:keys [keyword-callsites constants class]}]
   (mapcat (fn [k]
-            (let [{:keys [id]} (k constants)]
+            (let [{:keys [id]} (constants {:form k :tag clojure.lang.Keyword :meta nil})]
               `[[:new-instance :clojure.lang.KeywordLookupSite]
                 [:dup]
                 ~@(emit-value :keyword k)
@@ -1071,7 +1071,7 @@
                        :tag  clojure.lang.IPersistentMap}])
 
         keyword-callsites (mapcat (fn [k]
-                                    (let [{:keys [id]} (k constants)]
+                                    (let [{:keys [id]} (constants {:form k :tag clojure.lang.Keyword :meta nil})]
                                       [{:op   :field
                                         :attr #{:public :final :static}
                                         :name (str "site__" id)
@@ -1083,7 +1083,7 @@
                                   keyword-callsites)
 
         protocol-callsites  (mapcat (fn [p]
-                                      (let [{:keys [id]} (constants p)]
+                                      (let [{:keys [id]} (constants {:form p :tag clojure.lang.Var :meta (meta p)})]
                                         [{:op   :field
                                           :attr #{:private :static}
                                           :name (str "cached__class__" id)
