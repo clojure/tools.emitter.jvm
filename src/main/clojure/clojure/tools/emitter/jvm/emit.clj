@@ -475,17 +475,21 @@
 
 (defn emit-args-and-invoke
   ([args frame] (emit-args-and-invoke args frame false))
-  ([args frame proto?]
-     `[[:check-cast :clojure.lang.IFn]
-       ~@(mapcat #(emit % frame) (take 20 args))
-       ~@(when-let [args (seq (drop 20 args))]
-           (emit-as-array args frame))
-       [:invoke-interface [:clojure.lang.IFn/invoke ~@(repeat (min 21 (count args)) :java.lang.Object) ~@(when proto? [:java.lang.Object])] :java.lang.Object]]))
+  ([args {:keys [to-clear?] :as frame} proto?]
+     (let [frame (dissoc frame to-clear?)]
+       `[[:check-cast :clojure.lang.IFn]
+         ~@(mapcat #(emit % frame) (take 20 args))
+         ~@(when-let [args (seq (drop 20 args))]
+             (emit-as-array args frame))
+         ~@(when to-clear?
+             [[:insn :ACONST_NULL]
+              [:var-insn :clojure.lang.AFunction/ISTORE 0]])
+         [:invoke-interface [:clojure.lang.IFn/invoke ~@(repeat (min 21 (count args)) :java.lang.Object) ~@(when proto? [:java.lang.Object])] :java.lang.Object]])))
 
 (defmethod -emit :invoke
   [{:keys [fn args env]} frame]
   `[~@(emit fn frame)
-    ~@(emit-args-and-invoke args frame)])
+    ~@(emit-args-and-invoke args (assoc frame :to-clear? (:to-clear? env)))])
 
 (defmethod -emit :protocol-invoke
   [{:keys [fn args env]} frame]
