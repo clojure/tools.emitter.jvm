@@ -19,7 +19,7 @@
 (defmulti -emit-set! (fn [{:keys [op]} _] op))
 
 (def nil-expr
-  {:op :const :type :nil :form nil})
+  {:op :const :type :nil :form nil :val nil})
 
 (defn emit-box [tag box]
   (if (and (primitive? tag)
@@ -140,8 +140,8 @@
          [:get-static (frame :class) (str "const__" id) tag]))]))
 
 (defmethod -emit :const
-  [{:keys [form tag]} frame]
-  (emit-constant form frame tag))
+  [{:keys [val tag]} frame]
+  (emit-constant val frame tag))
 
 (defmethod -emit :quote
   [{:keys [expr]} frame]
