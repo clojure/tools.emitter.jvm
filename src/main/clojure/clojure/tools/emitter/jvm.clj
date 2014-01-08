@@ -7,10 +7,14 @@
 ;;   You must not remove this notice, or any other, from this software.
 
 (ns clojure.tools.emitter.jvm
-  (:refer-clojure :exclude [eval macroexpand-1])
+  (:refer-clojure :exclude [eval macroexpand-1 load])
   (:require [clojure.tools.analyzer.jvm :as a]
             [clojure.tools.analyzer :refer [macroexpand-1]]
-            [clojure.tools.emitter.jvm.emit :as e])
+            [clojure.tools.emitter.jvm.emit :as e]
+            [clojure.java.io :as io]
+            [clojure.string :as s]
+            [clojure.tools.reader :as r]
+            [clojure.tools.reader.reader-types :as readers])
   (:import clojure.lang.IFn))
 
 (defn eval
@@ -29,3 +33,14 @@
                           :class-loader (clojure.lang.RT/makeClassLoader)})
                {:keys [class]} (meta r)]
            (.invoke ^IFn (.newInstance ^Class class)))))))
+
+(defn load [res]
+  (let [p    (str (s/replace res #"\." "/") ".clj")
+        eof  (reify)
+        file (-> p io/resource io/reader slurp)
+        reader (readers/indexing-push-back-reader file)]
+    (loop []
+      (let [form (r/read reader false eof)]
+        (when (not= eof form)
+          (eval form)
+          (recur))))))
