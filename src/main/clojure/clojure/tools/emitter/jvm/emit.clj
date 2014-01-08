@@ -1087,7 +1087,7 @@
                                   keyword-callsites)
 
         protocol-callsites  (mapcat (fn [p]
-                                      (let [{:keys [id]} (constants {:form p :tag clojure.lang.Var :meta (meta p)})]
+                                      (let [{:keys [id]} (constants {:form p :tag clojure.lang.Var :meta (clojure.core/meta p)})]
                                         [{:op   :field
                                           :attr #{:private :static}
                                           :name (str "cached__class__" id)
