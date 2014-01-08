@@ -892,25 +892,33 @@
     :java.lang.Boolean]])
 
 (defmethod -emit-value :number [_ n]
-  [[:push n]
-   (cond
-    (instance? Long n)
-    [:invoke-static [:java.lang.Long/valueOf :long] :java.lang.Long]
+  (cond
+   (instance? Long n)
+   [[:push n]
+    [:invoke-static [:java.lang.Long/valueOf :long] :java.lang.Long]]
 
-    (instance? Integer n)
-    [:invoke-static [:java.lang.Integer/valueOf :int] :java.lang.Integer]
+   (instance? Integer n)
+   [[:push n]
+    [:invoke-static [:java.lang.Integer/valueOf :int] :java.lang.Integer]]
 
-    (instance? Double n)
-    [:invoke-static [:java.lang.Double/valueOf :double] :java.lang.Double]
+   (instance? Double n)
+   [[:push n]
+    [:invoke-static [:java.lang.Double/valueOf :double] :java.lang.Double]]
 
-    (instance? Float n)
-    [:invoke-static [:java.lang.Float/valueOf :float] :java.lang.Float]
+   (instance? Float n)
+   [[:push n]
+    [:invoke-static [:java.lang.Float/valueOf :float] :java.lang.Float]]
 
-    (instance? Byte n)
-    [:invoke-static [:java.lang.Byte/valueOf :byte] :java.lang.Byte]
+   (instance? Byte n)
+   [[:push n]
+    [:invoke-static [:java.lang.Byte/valueOf :byte] :java.lang.Byte]]
 
-    (instance? Short n)
-    [:invoke-static [:java.lang.Short/valueOf :short] :java.lang.Short])])
+   (instance? Short n)
+   [[:push n]
+    [:invoke-static [:java.lang.Short/valueOf :short] :java.lang.Short]]
+
+   :else
+   (-emit-value :default n)))
 
 (defmethod -emit-value :class [_ c]
   (if (primitive? c)
