@@ -477,8 +477,7 @@
   ([args frame] (emit-args-and-invoke args frame false))
   ([args {:keys [to-clear?] :as frame} proto?]
      (let [frame (dissoc frame to-clear?)]
-       `[[:check-cast :clojure.lang.IFn]
-         ~@(mapcat #(emit % frame) (take 19 args))
+       `[~@(mapcat #(emit % frame) (take 19 args))
          ~@(when-let [args (seq (drop 19 args))]
              (emit-as-array args frame))
          ~@(when to-clear?
@@ -489,6 +488,7 @@
 (defmethod -emit :invoke
   [{:keys [fn args env]} frame]
   `[~@(emit fn frame)
+    [:check-cast :clojure.lang.IFn]
     ~@(emit-args-and-invoke args (assoc frame :to-clear? (:to-clear? env)))])
 
 (defmethod -emit :protocol-invoke
@@ -525,7 +525,7 @@
 
       ~@(mapcat #(emit % frame) args)
       [:invoke-interface [~(keyword (.getName pinterface)
-                                    (munge (str (:name fn))))
+                                    (munge (str (:form fn))))
                           ~@(repeat (count args) :java.lang.Object)] :java.lang.Object]
 
       [:mark ~end-label]]))
