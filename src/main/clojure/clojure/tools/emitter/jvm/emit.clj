@@ -176,7 +176,7 @@
          [:invoke-virtual [:clojure.lang.Var/setDynamic :boolean] :clojure.lang.Var]])
     ~@(when meta
         `[[:dup]
-          ~@(emit (assoc meta :tag clojure.lang.IPersistentMap) frame)
+          ~@(emit meta frame)
           [:invoke-virtual [:clojure.lang.Var/setMeta :clojure.lang.IPersistentMap] :void]])
     ~@(when init
         `[[:dup]
@@ -222,8 +222,8 @@
 (defmethod -emit :with-meta
   [{:keys [meta expr]} frame]
   (into
-   (emit (assoc expr :tag clojure.lang.IObj) frame)
-   `[~@(emit (assoc meta :tag clojure.lang.IPersistentMap) frame)
+   (emit expr frame)
+   `[~@(emit meta frame)
      [:invoke-interface [:clojure.lang.IObj/withMeta :clojure.lang.IPersistentMap]
       :clojure.lang.IObj]]))
 
