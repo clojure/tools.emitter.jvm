@@ -55,7 +55,7 @@
      (let [bytecode (-emit ast frame)
            statement? (= :statement (:context env))
            m (meta bytecode)
-           ret-tag (or ret-tag bind-tag tag)]
+           ret-tag (or ret-tag bind-tag)]
        (if statement?
          (if (:const m)
            []
@@ -63,7 +63,7 @@
                  (when (and (not (:untyped m))
                             (not (:container m))
                             (not= Void/TYPE tag))
-                   (if (#{Double/TYPE Long/TYPE} ret-tag)
+                   (if (#{Double/TYPE Long/TYPE} (or ret-tag tag))
                      [[:pop2]]
                      [[:pop]]))))
          (into bytecode
