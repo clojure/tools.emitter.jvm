@@ -10,7 +10,7 @@
   (:refer-clojure :exclude [type])
   (:require [clojure.string :as s]
             [clojure.tools.analyzer.jvm.utils :refer [maybe-class]]
-            [clojure.tools.analyzer.utils :refer [update!]])
+            [clojure.tools.analyzer.utils :refer [update! boolean?]])
   (:import (org.objectweb.asm Type Label Opcodes ClassWriter ClassReader)
            (org.objectweb.asm.commons GeneratorAdapter Method)
            (org.objectweb.asm.util CheckClassAdapter TraceClassVisitor)))
@@ -403,7 +403,10 @@
    (.visitIntInsn gen Opcodes/SIPUSH (int x))
 
    (instance? Byte x)
-   (.visitIntInsn gen Opcodes/BIPUSH (int x))))
+   (.visitIntInsn gen Opcodes/BIPUSH (int x))
+
+   (boolean? x)
+   (.push gen (boolean x))))
 
 (defn compute-attr [attr]
   (reduce (fn [r x] (+ r (opcode x))) 0 attr))
