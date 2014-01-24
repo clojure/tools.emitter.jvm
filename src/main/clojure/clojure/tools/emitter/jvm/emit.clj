@@ -55,7 +55,7 @@
      (let [bytecode (-emit ast frame)
            statement? (= :statement (:context env))
            m (meta bytecode)
-           ret-tag (or ret-tag bind-tag)]
+           ret-tag (or ret-tag bind-tag tag)]
        (if statement?
          (if (:const m)
            []
@@ -654,15 +654,16 @@
   [{:keys [op bindings body env]} frame]
   (let [loop? (= :loop op)
         [end-label loop-label & labels] (repeatedly (+ 2 (count bindings)) label)]
-    `^:container
-    [~@(emit-bindings bindings labels frame)
-     [:mark ~loop-label]
-     ~@(emit body (merge frame (when loop? {:loop-label loop-label
-                                            :loop-locals bindings})))
-     [:mark ~end-label]
-     ~@(mapv (fn [{:keys [name tag]} label]
-               [:local-variable name (or tag :java.lang.Object) nil label end-label name])
-             bindings labels)]))
+    (with-meta
+      `[~@(emit-bindings bindings labels frame)
+        [:mark ~loop-label]
+        ~@(emit body (merge frame (when loop? {:loop-label loop-label
+                                               :loop-locals bindings})))
+        [:mark ~end-label]
+        ~@(mapv (fn [{:keys [name tag]} label]
+                  [:local-variable name (or tag :java.lang.Object) nil label end-label name])
+                bindings labels)]
+      (if loop? {} {:container true}))))
 
 (defmethod -emit :let
   [ast frame]
