@@ -525,7 +525,7 @@
 
       ~@(mapcat #(emit % frame) args)
       [:invoke-interface [~(keyword (.getName pinterface)
-                                    (munge (str (:form fn))))
+                                    (munge (name (:form fn))))
                           ~@(repeat (count args) :java.lang.Object)] :java.lang.Object]
 
       [:mark ~end-label]]))
