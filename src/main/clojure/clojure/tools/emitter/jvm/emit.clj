@@ -16,7 +16,7 @@
   (:import clojure.lang.Reflector))
 
 (defmulti -emit (fn [{:keys [op]} _] op))
-(defmulti -emit-set! (fn [{:keys [op]} _] op))
+(defmulti -emit-set! (fn [{:keys [target]} _] (:op target)))
 
 (def nil-expr
   {:op :const :type :nil :form nil :val nil})
