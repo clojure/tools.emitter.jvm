@@ -51,7 +51,7 @@
 (defn emit
   ([ast]
      (emit ast {}))
-  ([{:keys [env o-tag tag op] :as ast} frame]
+  ([{:keys [env o-tag tag op type] :as ast} frame]
      (let [bytecode (-emit ast frame)
            statement? (= :statement (:context env))
            m (meta bytecode)]
@@ -69,7 +69,8 @@
                `[~@(when (:untyped m)
                      [[:insn :ACONST_NULL]])
                  ~@(when (and (not= tag o-tag)
-                              (not= :const op))
+                              (or (not= :const op)
+                                  (= :bool type)))
                      (emit-cast o-tag tag))])))))
 
 (defmethod -emit :import
@@ -724,7 +725,7 @@
                 `[~@(emit arg frame)
                   ~(if (= :arg local)
                      [:store-arg (:arg-id binding)]
-                     [:var-insn (keyword tag (.getName ^Class tag) "ISTORE")
+                     [:var-insn (keyword (.getName ^Class tag) "ISTORE")
                       name])]) exprs loop-locals)
     [:go-to ~loop-label]])
 
