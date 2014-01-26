@@ -1325,7 +1325,7 @@
    {:keys [class] :as frame}]
   (let [class-name (str (or class (munge (ns-name *ns*)))
                         "$"
-                        (or name
+                        (or (munge name)
                          (gensym (str (or (and (:form local)
                                                (s/replace (:form local) "." "_DOT_"))
                                           "fn") "__"))))
