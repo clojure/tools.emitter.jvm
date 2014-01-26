@@ -1309,11 +1309,10 @@
     (emit-class ast frame)))
 
 (defmethod -emit :deftype
-  [{:keys [class-name fields] :as ast}
+  [{:keys [class-name] :as ast}
    frame]
   (let [class-name (.getName ^Class class-name)
         ast (assoc ast
-              :closed-overs (zipmap (mapv :name fields) fields)
               :class-name class-name
               :super :java.lang.Object)]
     (with-meta
