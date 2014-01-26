@@ -49,6 +49,9 @@
     (let [check-cast (type (first a))]
       (cond
 
+       (= :check-cast post-i)
+       true
+
        (#{:invoke-static :invoke-virtual :invoke-interface
           :invoke-constructor :get-static :get-field} pre-i)
        (= (type (last pre-a)) check-cast)
