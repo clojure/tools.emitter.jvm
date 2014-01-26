@@ -1321,13 +1321,14 @@
       {:untyped true})))
 
 (defmethod -emit :fn
-  [{:keys [local variadic?] :as ast}
+  [{:keys [local name variadic?] :as ast}
    {:keys [class] :as frame}]
   (let [class-name (str (or class (munge (ns-name *ns*)))
                         "$"
-                        (gensym (str (or (and (:form local)
-                                              (s/replace (:form local) "." "_DOT_"))
-                                         "fn") "__")))
+                        (or name
+                         (gensym (str (or (and (:form local)
+                                               (s/replace (:form local) "." "_DOT_"))
+                                          "fn") "__"))))
         super (if variadic? :clojure.lang.RestFn :clojure.lang.AFunction)
         ast (assoc ast
               :class-name class-name
