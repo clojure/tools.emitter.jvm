@@ -1325,10 +1325,10 @@
    {:keys [class] :as frame}]
   (let [class-name (str (or class (munge (ns-name *ns*)))
                         "$"
-                        (or (munge name)
-                         (gensym (str (or (and (:form local)
-                                               (s/replace (:form local) "." "_DOT_"))
-                                          "fn") "__"))))
+                        (or (and name (munge name))
+                            (gensym (str (or (and (:form local)
+                                                  (s/replace (:form local) "." "_DOT_"))
+                                             "fn") "__"))))
         super (if variadic? :clojure.lang.RestFn :clojure.lang.AFunction)
         ast (assoc ast
               :class-name class-name
