@@ -951,10 +951,16 @@
 (defmethod -emit-value :map [_ m]
   (let [arr (mapcat identity m)]
     `[~@(emit-values-as-array arr)
-      ~@(if (sorted? m)
-          [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
-           [:invoke-static [:clojure.lang.PersistentTreeMap/create :clojure.lang.ISeq] :clojure.lang.PersistentTreeMap]]
-          [[:invoke-static [:clojure.lang.RT/map :objects] :clojure.lang.IPersistentMap]])]))
+      ~@(cond
+         (sorted? m)
+         [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
+          [:invoke-static [:clojure.lang.PersistentTreeMap/create :clojure.lang.ISeq] :clojure.lang.PersistentTreeMap]]
+         (and (= clojure.lang.PersistentHashMap (class m))
+              (<= (count m) 8))
+         [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
+          [:invoke-static [:clojure.lang.PersistentHashMap/create :clojure.lang.ISeq] :clojure.lang.PersistentHashMap]]
+         :else
+         [[:invoke-static [:clojure.lang.RT/map :objects] :clojure.lang.IPersistentMap]])]))
 
 (defmethod -emit-value :vector [_ v]
   `[~@(emit-values-as-array v)
@@ -1293,7 +1299,7 @@
           ~@(when meta
               [[:insn :ACONST_NULL]])
           ~@(mapcat #(emit (assoc % :op :local) old-frame)
-                    closed-overs) ;; need to clear?
+                    closed-overs)
           [:invoke-constructor [~(keyword class-name "<init>")
                                 ~@ctor-types] :void]]
         {:class class}))))
