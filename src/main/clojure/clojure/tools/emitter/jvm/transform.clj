@@ -44,31 +44,22 @@
 (defmulti -exec (fn [op _ _] op))
 
 (declare type)
-(defn omit? [[pre-i & pre-a :as pre] [i & a :as curr] [post-i & post-a :as post]]
-  (cond
-   (or (#{:get-field :get-static} i)
-       (= [:insn :ACONST_NULL] curr))
-   (#{:pop :pop2} post-i)
+(defn omit? [[pre-i & pre-a] [i & a] [post-i & post-a]]
+  (when (= :check-cast i)
+    (let [check-cast (type (first a))]
+      (cond
 
-   (#{:pop :pop2} i)
-   (or (#{:get-field :get-static} pre-i)
-       (= [:insn :ACONST_NULL] pre))
+       (= :check-cast post-i)
+       true
 
-   (= :check-cast i)
-   (let [check-cast (type (first a))]
-     (cond
+       (#{:invoke-static :invoke-virtual :invoke-interface
+          :invoke-constructor :get-static :get-field} pre-i)
+       (= (type (last pre-a)) check-cast)
+       ;; (#{:put-static :put-field} post-i)
+       ;; (= (type (last post-a)) check-cast)
 
-      (= :check-cast post-i)
-      true
-
-      (#{:invoke-static :invoke-virtual :invoke-interface
-         :invoke-constructor :get-static :get-field} pre-i)
-      (= (type (last pre-a)) check-cast)
-      ;; (#{:put-static :put-field} post-i)
-      ;; (= (type (last post-a)) check-cast)
-
-      :else
-      (= :return-value post-i)))))
+       :else
+       (= :return-value post-i)))))
 
 (defn transform [gen bc]
   (binding [*locals* *locals*
