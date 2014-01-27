@@ -849,6 +849,9 @@
 
      (= :arg local)
      `[[:load-arg ~arg-id]
+       ~@(when-not (or (= Object tag)
+                       (primitive? tag))
+           [[:check-cast tag]])
        ~@(when to-clear?
            [[:insn :ACONST_NULL]
             [:store-arg arg-id]])]
