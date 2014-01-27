@@ -284,23 +284,23 @@
 
    :else
    (case (name op)
-     "ISTORE"               Opcodes/ISTORE
-     "ILOAD"                Opcodes/ILOAD
-     "ACONST_NULL"          Opcodes/ACONST_NULL
-     "IF_ACMPEQ"            Opcodes/IF_ACMPEQ
-     "IF_ACMPNE"            Opcodes/IF_ACMPNE
-     "ISHR"                 Opcodes/ISHR
-     "IAND"                 Opcodes/IAND
-     "public"               Opcodes/ACC_PUBLIC
-     "bridge"               Opcodes/ACC_BRIDGE
-     "super"                Opcodes/ACC_SUPER
-     "final"                Opcodes/ACC_FINAL
-     "static"               Opcodes/ACC_STATIC
-     "private"              Opcodes/ACC_PRIVATE
-     "volatile-mutable"     Opcodes/ACC_VOLATILE
-     "synchronized-mutable" 0
-     "EQ"                   GeneratorAdapter/EQ
-     "NE"                   GeneratorAdapter/NE)))
+     "ISTORE"                 Opcodes/ISTORE
+     "ILOAD"                  Opcodes/ILOAD
+     "ACONST_NULL"            Opcodes/ACONST_NULL
+     "IF_ACMPEQ"              Opcodes/IF_ACMPEQ
+     "IF_ACMPNE"              Opcodes/IF_ACMPNE
+     "ISHR"                   Opcodes/ISHR
+     "IAND"                   Opcodes/IAND
+     "public"                 Opcodes/ACC_PUBLIC
+     "bridge"                 Opcodes/ACC_BRIDGE
+     "super"                  Opcodes/ACC_SUPER
+     "final"                  Opcodes/ACC_FINAL
+     "static"                 Opcodes/ACC_STATIC
+     "private"                Opcodes/ACC_PRIVATE
+     "volatile-mutable"       Opcodes/ACC_VOLATILE
+     "unsynchronized-mutable" 0
+     "EQ"                     GeneratorAdapter/EQ
+     "NE"                     GeneratorAdapter/NE)))
 
 (defmethod -exec :insn
   [_ [insn] ^GeneratorAdapter gen]

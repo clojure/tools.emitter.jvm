@@ -671,7 +671,7 @@
   [ast frame]
   (emit-let ast frame))
 
-(defn emit-letfn-bindings [bindings  class-names frame]
+(defn emit-letfn-bindings [bindings class-names frame]
   (let [binds (set (mapv :name bindings))]
     (mapcat (fn [{:keys [init tag name]} class-name]
               (let [{:keys [closed-overs]} init]
@@ -862,6 +862,15 @@
        ~@(when to-clear?
            [[:insn :ACONST_NULL]
             [:var-insn (keyword (.getName ^Class o-tag) "ISTORE") name]])])))
+
+(defmethod -emit-set! :local
+  [{:keys [target val env]} {:keys [class] :as frame}]
+  (let [{:keys [o-tag name]} target]
+    `[~@(emit-line-number env)
+     [:load-this]
+     ~@(emit (assoc val :tag Object) frame)
+     ~[:put-field class name Object]
+     ~@(-emit target frame)]))
 
 (defmulti -emit-value (fn [type value] type))
 
