@@ -28,7 +28,7 @@
            (doseq [expr statements]
              (eval expr debug?))
            (eval ret debug?))
-         (let [r (e/emit (a/analyze `(^:once fn* [] ~form) (a/empty-env))
+         (let [r (e/emit (a/analyze `(^:once fn* [] ~mform) (a/empty-env))
                          {:debug? debug?
                           :class-loader (clojure.lang.RT/makeClassLoader)})
                {:keys [class]} (meta r)]
