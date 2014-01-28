@@ -1068,7 +1068,7 @@
 
 (defn emit-class
   [{:keys [class-name meta methods variadic? constants closed-overs keyword-callsites
-           protocol-callsites env annotations super interfaces op fields top-level]
+           protocol-callsites env annotations super interfaces op fields]
     :as ast}
    {:keys [debug? class-loader] :as frame}]
   (let [old-frame frame
@@ -1080,9 +1080,7 @@
                                 constants))
 
         frame (merge frame
-                     {:class              (if top-level
-                                            (munge (ns-name *ns*))
-                                            class-name)
+                     {:class              class-name
                       :constants          constants
                       :closed-overs       closed-overs
                       :keyword-callsites  keyword-callsites
@@ -1346,10 +1344,10 @@
 
 (defmethod -emit :fn
   [{:keys [local form name class-name variadic?] :as ast}
-   {:keys [class] :as frame}]
-  (let [top-level (-> form first meta :top-level)
-        class-name (or class-name
-                       (str (or class (munge (ns-name *ns*)))
+   {:keys [class top-level] :as frame}]
+  (let [class-name (or class-name
+                       (str (or (and (not top-level) class)
+                                (munge (ns-name *ns*)))
                             "$"
                             (or (and name (munge name))
                                 (gensym (str (or (and (:form local)
@@ -1358,6 +1356,7 @@
         super (if variadic? :clojure.lang.RestFn :clojure.lang.AFunction)
         ast (assoc ast
               :class-name class-name
-              :super super
-              :top-level top-level)]
-    (emit-class ast frame)))
+              :super super)]
+    (emit-class ast (assoc frame
+                      :top-level (and (not top-level)
+                                      (-> form first meta :top-level))))))
