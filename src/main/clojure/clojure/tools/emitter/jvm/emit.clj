@@ -754,8 +754,12 @@
         code
         `[[:start-method]
           [:local-variable :this :clojure.lang.AFunction nil ~loop-label ~end-label :this]
-          ~@(mapv (fn [{:keys [name tag]}]
-                    [:local-variable name tag nil loop-label end-label name])
+          ~@(mapcat (fn [{:keys [name arg-id o-tag tag]}]
+                      `[~[:local-variable name tag nil loop-label end-label name]
+                        ~@(when-not (= tag o-tag)
+                            [[:load-arg arg-id]
+                             [:check-cast tag]
+                             [:store-arg arg-id]])])
                   params)
           [:mark ~loop-label]
           ~@(emit-line-number env loop-label)
@@ -850,9 +854,6 @@
 
      (= :arg local)
      `[[:load-arg ~arg-id]
-       ~@(when-not (or (= Object tag)
-                       (primitive? tag))
-           [[:check-cast tag]])
        ~@(when to-clear?
            [[:insn :ACONST_NULL]
             [:store-arg arg-id]])]
