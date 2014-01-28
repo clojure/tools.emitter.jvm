@@ -1185,25 +1185,6 @@
                                      [:return-value]
                                      [:end-method]]}])
 
-        kw-callsite-method (when-let [kw-cs (seq (frame :keyword-callsites))]
-                             (let [cs-count (count kw-cs)
-                                   [end-label & labels] (repeatedly (inc cs-count) label)]
-                               [{:op     :method
-                                 :attr   #{:public}
-                                 :method [[:swapThunk :int :clojure.lang.ILookupThunk] :void]
-                                 :code   `[[:start-method]
-                                           [:load-arg 0]
-                                           ~[:table-switch-insn 0 (dec cs-count) end-label labels]
-                                           ~@(mapcat (fn [i l]
-                                                       [[:mark l]
-                                                        [:load-arg 1]
-                                                        [:put-static class-name (str "thunk__" i) :clojure.lang.ILookupThunk]
-                                                        [:go-to end-label]])
-                                                     (range) labels)
-                                           [:mark ~end-label]
-                                           [:return-value]
-                                           [:end-method]]}]))
-
         variadic-method (when variadic?
                           (let [required-arity (->> methods (filter :variadic?) first :fixed-arity)]
                             [{:op     :method
@@ -1301,8 +1282,8 @@
          :fields      `[~@consts ~@ keyword-callsites
                         ~@meta-field ~@closed-overs ~@protocol-callsites]
          :methods     `[~@class-ctors ~@defrecord-ctor ~@deftype-methods
-                        ~@kw-callsite-method ~@variadic-method
-                        ~@meta-methods ~@(mapcat #(-emit % frame) methods)]}
+                        ~@variadic-method ~@meta-methods
+                        ~@(mapcat #(-emit % frame) methods)]}
 
         bc
         (t/-compile jvm-ast)
