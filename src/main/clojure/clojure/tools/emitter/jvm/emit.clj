@@ -945,7 +945,7 @@
 (defmethod -emit-value :keyword [_ k]
   [[:push (namespace k)]
    [:push (name k)]
-   [:invoke-static [:clojure.lang.RT/keyword :java.lang.String :java.lang.String]
+   [:invoke-static [:clojure.lang.Keyword/intern :java.lang.String :java.lang.String]
     :clojure.lang.Keyword]])
 
 (defmethod -emit-value :var [_ ^clojure.lang.Var v]
