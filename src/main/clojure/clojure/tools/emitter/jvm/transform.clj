@@ -24,10 +24,16 @@
    (class? x)
    (let [class ^Class x
          n (.getName class)]
-     (if (.endsWith n ";")
-       (str (subs n 2 (dec (count n))) "[]")
-       n)
-     #_(.getCanonicalName ^Class x))
+     (cond
+
+      (.endsWith n ";")
+      (str (subs n 2 (dec (count n))) "[]")
+
+      (.startsWith n "[")
+      (.getCanonicalName ^Class x)
+
+      :else
+      n))
 
    :else
    (name x)))
