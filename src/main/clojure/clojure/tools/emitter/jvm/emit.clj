@@ -71,8 +71,7 @@
                                   (= Void/TYPE tag)))
                      [[:insn :ACONST_NULL]])
                  ~@(when (and (not= tag o-tag)
-                              (or (not= :const op)
-                                  (= :bool type)))
+                              (not= :const op))
                      (emit-cast o-tag tag))])))))
 
 (defmethod -emit :import
@@ -130,8 +129,10 @@
     ^:const
     [(case const
        (true false)
-       [:get-static (if const :java.lang.Boolean/TRUE :java.lang.Boolean/FALSE)
-        :java.lang.Boolean]
+       (if (primitive? c-tag)
+         [:push const]
+         [:get-static (if const :java.lang.Boolean/TRUE :java.lang.Boolean/FALSE)
+          :java.lang.Boolean])
 
        nil
        [:insn :ACONST_NULL]
