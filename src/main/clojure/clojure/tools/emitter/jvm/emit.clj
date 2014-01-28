@@ -356,7 +356,7 @@
     `[~@(emit-line-number env)
       [:get-static ~(name (frame :class)) ~(str "thunk__" id) :clojure.lang.ILookupThunk]
       [:dup]
-      ~@(emit fn frame)
+      ~@(emit (first args) frame)
       [:dup-x2]
       [:invoke-interface [:clojure.lang.ILookupThunk/get :java.lang.Object] :java.lang.Object]
       [:dup-x2]
@@ -370,7 +370,7 @@
       [:dup]
       [:get-static ~(name (frame :class)) ~(str "site__" id) :clojure.lang.KeywordLookupSite]
       [:swap]
-      [:invoke-interface [:clojure.lang.ILookupThunk/fault :java.lang.Object] :java.lang.Object]
+      [:invoke-interface [:clojure.lang.ILookupSite/fault :java.lang.Object] :clojure.lang.ILookupThunk]
       [:dup]
       [:put-static ~(name (frame :class)) ~(str "thunk__" id) :clojure.lang.ILookupThunk]
       [:swap]
@@ -945,7 +945,7 @@
 (defmethod -emit-value :keyword [_ k]
   [[:push (namespace k)]
    [:push (name k)]
-   [:invoke-static [:clojure.lang.Keyword/intern :java.lang.String :java.lang.String]
+   [:invoke-static [:clojure.lang.RT/keyword :java.lang.String :java.lang.String]
     :clojure.lang.Keyword]])
 
 (defmethod -emit-value :var [_ ^clojure.lang.Var v]
