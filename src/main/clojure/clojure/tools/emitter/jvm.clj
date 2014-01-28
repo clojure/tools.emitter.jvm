@@ -34,16 +34,18 @@
                {:keys [class]} (meta r)]
            (.invoke ^IFn (.newInstance ^Class class)))))))
 
-(defn load [res]
-  (let [p    (str (s/replace res #"\." "/") ".clj")
-        eof  (reify)
-        p (if (.startsWith p "/") (subs p 1) p)
-        file (-> p io/resource io/reader slurp)
-        reader (readers/indexing-push-back-reader file)]
-    (with-redefs [clojure.core/load load]
-      (binding [*ns* *ns*]
-        (loop []
-          (let [form (r/read reader false eof)]
-            (when (not= eof form)
-              (eval form)
-              (recur))))))))
+(defn load
+  ([res] (load res false))
+  ([res debug?]
+     (let [p    (str (s/replace res #"\." "/") ".clj")
+           eof  (reify)
+           p (if (.startsWith p "/") (subs p 1) p)
+           file (-> p io/resource io/reader slurp)
+           reader (readers/indexing-push-back-reader file)]
+       (with-redefs [clojure.core/load load]
+         (binding [*ns* *ns*]
+           (loop []
+             (let [form (r/read reader false eof)]
+               (when (not= eof form)
+                 (eval form debug?)
+                 (recur)))))))))
