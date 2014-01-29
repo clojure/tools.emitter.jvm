@@ -965,35 +965,53 @@
               (range) list)])
 
 (defmethod -emit-value :map [_ m]
-  (let [arr (mapcat identity m)]
+  (let [arr (mapcat identity m)
+        sorted? (sorted? m)
+        hmap? (= clojure.lang.PersistentHashMap (class m))]
     `[~@(emit-values-as-array arr)
       ~@(cond
-         (sorted? m)
+         (empty? m)
+         [(cond
+            sorted?
+            [:get-static :clojure.lang.PersistentTreeMap/EMPTY :clojure.lang.PersistentTreeMap]
+            hmap?
+            [:get-static :clojure.lang.PersistentHashMap/EMPTY :clojure.lang.PersistentHashMap]
+            :else
+            [:get-static :clojure.lang.PersistentArrayMap/EMPTY :clojure.lang.PersistentArrayMap])]
+         sorted?
          [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
           [:invoke-static [:clojure.lang.PersistentTreeMap/create :clojure.lang.ISeq] :clojure.lang.PersistentTreeMap]]
-         (and (= clojure.lang.PersistentHashMap (class m))
-              (<= (count m) 8))
+         (and hmap? (<= (count m) 8))
          [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
           [:invoke-static [:clojure.lang.PersistentHashMap/create :clojure.lang.ISeq] :clojure.lang.PersistentHashMap]]
          :else
          [[:invoke-static [:clojure.lang.RT/map :objects] :clojure.lang.IPersistentMap]])]))
 
 (defmethod -emit-value :vector [_ v]
-  `[~@(emit-values-as-array v)
-    [:invoke-static [:clojure.lang.RT/vector :objects] :clojure.lang.IPersistentVector]])
+  (if (empty? v)
+    [[:get-static :clojure.lang.PersistentVector/EMPTY :clojure.lang.PersistentVector]]
+    `[~@(emit-values-as-array v)
+      [:invoke-static [:clojure.lang.RT/vector :objects] :clojure.lang.IPersistentVector]]))
 
 (defmethod -emit-value :set [_ s]
-  `[~@(emit-values-as-array s)
-    ~@(if (sorted? s)
-        [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
-         [:invoke-static [:clojure.lang.PersistentTreeSet/create :clojure.lang.ISeq] :clojure.lang.PersistentTreeSet]]
-        [[:invoke-static [:clojure.lang.RT/set :objects] :clojure.lang.IPersistentSet]])])
+  (let [sorted? (sorted? s)]
+    (if (empty? s)
+      [(if sorted?
+          [:get-static :clojure.lang.PersistentTreeSet/EMPTY :clojure.lang.PersistentTreeSet]
+          [:get-static :clojure.lang.PersistentHashSet/EMPTY :clojure.lang.PersistentHashSet])]
+      `[~@(emit-values-as-array s)
+        ~@(if sorted?
+            [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
+             [:invoke-static [:clojure.lang.PersistentTreeSet/create :clojure.lang.ISeq] :clojure.lang.PersistentTreeSet]]
+            [[:invoke-static [:clojure.lang.RT/set :objects] :clojure.lang.IPersistentSet]])])))
 
 (defmethod -emit-value :seq [_ s]
-  `[~@(emit-values-as-array s)
-    [:invoke-static [:java.util.Arrays/asList :objects] :java.util.List]
-    [:invoke-static [:clojure.lang.PersistentList/create :java.util.List]
-     :clojure.lang.IPersistentList]])
+  (if (empty? s)
+    [[:get-static :clojure.lang.PersistentList/EMPTY :clojure.lang.PersistentList$EmptyList]]
+   `[~@(emit-values-as-array s)
+     [:invoke-static [:java.util.Arrays/asList :objects] :java.util.List]
+     [:invoke-static [:clojure.lang.PersistentList/create :java.util.List]
+      :clojure.lang.IPersistentList]]))
 
 (defmethod -emit-value :char [_ c]
   [[:push c]
