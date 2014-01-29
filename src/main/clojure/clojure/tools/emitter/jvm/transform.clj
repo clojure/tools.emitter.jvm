@@ -10,33 +10,36 @@
   (:refer-clojure :exclude [type])
   (:require [clojure.string :as s]
             [clojure.tools.analyzer.jvm.utils :refer [maybe-class]]
-            [clojure.tools.analyzer.utils :refer [update! boolean?]])
+            [clojure.tools.analyzer.utils :refer [update! boolean?]]
+            [clojure.core.memoize :refer [lru]])
   (:import (org.objectweb.asm Type Label Opcodes ClassWriter ClassReader)
            (org.objectweb.asm.commons GeneratorAdapter Method)
            (org.objectweb.asm.util CheckClassAdapter TraceClassVisitor)))
 
-(defn type-str [x]
-  (cond
-
-   (= :objects x)
-   "java.lang.Object[]"
-
-   (class? x)
-   (let [class ^Class x
-         n (.getName class)]
+(def type-str
+  (lru
+   (fn [x]
      (cond
 
-      (.endsWith n ";")
-      (str (subs n 2 (dec (count n))) "[]")
+      (= :objects x)
+      "java.lang.Object[]"
 
-      (.startsWith n "[")
-      (.getCanonicalName ^Class x)
+      (class? x)
+      (let [class ^Class x
+            n (.getName class)]
+        (cond
+
+         (.endsWith n ";")
+         (str (subs n 2 (dec (count n))) "[]")
+
+         (.startsWith n "[")
+         (.getCanonicalName ^Class x)
+
+         :else
+         n))
 
       :else
-      n))
-
-   :else
-   (name x)))
+      (name x)))))
 
 (defn method-desc [ret method args]
   (Method/getMethod (str (type-str ret) " "
@@ -95,25 +98,30 @@
 
     nil))
 
-(defn ^Class get-class [type-desc]
-  (cond
-   (nil? type-desc)
-   Object
+(def ^Class get-class
+  (lru
+   (fn [type-desc]
+     (cond
+      (nil? type-desc)
+      Object
 
-   (class? type-desc)
-   type-desc
+      (class? type-desc)
+      type-desc
 
-   (special type-desc)
-   (special type-desc)
+      (special type-desc)
+      (special type-desc)
 
-   :else
-   (Class/forName (name type-desc))))
+      :else
+      (try
+        (Class/forName (name type-desc))
+        (catch ClassNotFoundException e))))))
 
-(defn ^Type type [type-desc]
-  (try
-    (Type/getType (get-class type-desc))
-    (catch ClassNotFoundException e
-      (Type/getObjectType (s/replace type-desc \. \/)))))
+(def ^Type type
+  (lru
+   (fn [type-desc]
+     (if-let [class (get-class type-desc)]
+       (Type/getType class)
+       (Type/getObjectType (s/replace type-desc \. \/))))))
 
 (defmethod -exec :invoke-static
   [_ [[method & args] ret] ^GeneratorAdapter gen]
