@@ -1322,13 +1322,14 @@
       {:untyped true})))
 
 (defmethod -emit :fn
-  [{:keys [local form name class-name variadic?] :as ast}
+  [{:keys [local form name class-name local variadic?] :as ast}
    {:keys [class top-level] :as frame}]
-  (let [class-name (or class-name
+  (let [name (if local (str (munge name) (gensym "__")) (and name (munge name)))
+        class-name (or class-name
                        (str (or (and (not top-level) class)
                                 (munge (ns-name *ns*)))
                             "$"
-                            (or (and name (munge name))
+                            (or name
                                 (gensym (str (or (and (:form local)
                                                       (s/replace (:form local) "." "_DOT_"))
                                                  "fn") "__")))))
