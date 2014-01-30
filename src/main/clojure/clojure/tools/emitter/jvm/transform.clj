@@ -10,7 +10,7 @@
   (:refer-clojure :exclude [type])
   (:require [clojure.string :as s]
             [clojure.tools.analyzer.jvm.utils :refer [maybe-class]]
-            [clojure.tools.analyzer.utils :refer [update! boolean?]]
+            [clojure.tools.analyzer.utils :refer [boolean?]]
             [clojure.core.memoize :refer [lru]])
   (:import (org.objectweb.asm Type Label Opcodes ClassWriter ClassReader)
            (org.objectweb.asm.commons GeneratorAdapter Method)
@@ -46,8 +46,8 @@
                          (name method)
                          \( (s/join ", " (map type-str args)) \))))
 
-(def ^:dynamic *labels* {})
-(def ^:dynamic *locals* {})
+(def ^:dynamic *labels*)
+(def ^:dynamic *locals*)
 
 (defmulti -compile :op)
 (defmulti -exec (fn [op _ _] op))
@@ -71,8 +71,8 @@
        (= :return-value post-i)))))
 
 (defn transform [gen bc]
-  (binding [*locals* *locals*
-            *labels* *labels*]
+  (binding [*locals* (atom {:locals {} :next-id 0})
+            *labels* (atom {})]
     (loop [pre nil
            [inst & args :as cur] (first bc)
            bc (next bc)]
@@ -203,9 +203,9 @@
     (.putField gen (type class) (name field) (type tag))))
 
 (defn get-label [^GeneratorAdapter gen label]
-  (or (*labels* label)
+  (or (@*labels* label)
       (let [l (.newLabel gen)]
-        (update! *labels* assoc label l)
+        (swap! *labels* assoc label l)
         l)))
 
 (defmethod -exec :mark
@@ -336,13 +336,21 @@
   [_ [t insn label] ^GeneratorAdapter gen]
   (.ifCmp gen (type t) (opcode insn) (get-label gen label)))
 
-(defn get-local [local]
-  (if (integer? local)
-    local
-    (or (*locals* local)
-        (let [l (count *locals*)]
-          (update! *locals* assoc local l)
-          l))))
+(defn get-local
+  ([local] (get-local local nil))
+  ([local tag]
+     (if (integer? local)
+       local
+       (let [{:keys [locals next-id]} @*locals*]
+         (or (locals local)
+             (do
+               (swap! *locals* #(assoc-in % [:locals local] next-id))
+               (swap! *locals* update-in [:next-id]
+                      (if (#{Long/TYPE Double/TYPE} (get-class tag))
+                        #(+ 2 %)
+                        inc))
+
+               next-id))))))
 
 (defmethod -exec :load-arg
   [_ [arg] ^GeneratorAdapter gen]
@@ -351,7 +359,6 @@
 (defmethod -exec :store-arg
   [_ [arg] ^GeneratorAdapter gen]
   (.storeArg gen (int arg)))
-
 
 (defmethod -exec :var-insn
   [_ [insn local] ^GeneratorAdapter gen]
@@ -378,7 +385,7 @@
 (defmethod -exec :local-variable
   [_ [desc tag _ l1 l2 local] ^GeneratorAdapter gen]
   (.visitLocalVariable gen (name desc) (descriptor tag) nil (get-label gen l1)
-                       (get-label gen l2) (get-local local)))
+                       (get-label gen l2) (get-local local tag)))
 
 (defmethod -exec :line-number
   [_ [line label] ^GeneratorAdapter gen]
