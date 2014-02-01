@@ -615,8 +615,8 @@
         tests (zipmap (mapv :hash tests) (mapv :test tests))
         thens (apply sorted-map (mapcat (juxt :hash :then) thens))
         [default-label end-label] (repeatedly label)
-        tests-ks (keys test)
-        tests-vs (repeatedly label)
+        tests-ks (keys tests)
+        tests-vs (repeatedly (count tests-ks) label)
         labels (zipmap tests-ks tests-vs)]
     `^:container
     [~@(emit-line-number env)
