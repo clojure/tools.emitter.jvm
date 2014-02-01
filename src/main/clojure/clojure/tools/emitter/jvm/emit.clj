@@ -615,14 +615,16 @@
         tests (zipmap (mapv :hash tests) (mapv :test tests))
         thens (apply sorted-map (mapcat (juxt :hash :then) thens))
         [default-label end-label] (repeatedly label)
-        labels (zipmap (keys tests) (repeatedly label))]
+        tests-ks (keys test)
+        tests-vs (repeatedly label)
+        labels (zipmap tests-ks tests-vs)]
     `^:container
     [~@(emit-line-number env)
      ~@(if (= :int test-type)
          (emit-test-ints ast frame default-label)
          (emit-test-hashes ast frame))
      ~(if (= :sparse switch-type)
-        [:lookup-switch-insn default-label (keys tests) (vals labels)] ; to array
+        [:lookup-switch-insn default-label tests-ks tests-vs] ; to array
         [:table-switch-insn low high default-label
          (mapv (fn [i] (if (contains? labels i) (labels i) default-label)) (range low (inc high)))])
      ~@(mapcat (fn [[i label]]
