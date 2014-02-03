@@ -21,7 +21,7 @@
 (def nil-expr
   {:op :const :type :nil :form nil :val nil})
 
-(defn emit-box [tag box]
+(defn emit-box [tag box unchecked?]
   (if (and (primitive? tag)
            (not (primitive? box)))
     (cond
@@ -34,7 +34,7 @@
      [[:invoke-static [:clojure.lang.RT/box :boolean] :java.lang.Object]
       [:check-cast :java.lang.Boolean]])
     (when (primitive? box)
-      (let [method (if (and (numeric? box) *unchecked-math*)
+      (let [method (if (and (numeric? box) (or unchecked? *unchecked-math*))
                      (str "unchecked" (s/capitalize (.getName ^Class box)) "Cast")
                      (str (.getName ^Class box) "Cast"))
             tag (prim-or-obj tag)
@@ -43,17 +43,19 @@
           (mapv (fn [op] [:insn op]) ops)
           [[:invoke-static [(keyword "clojure.lang.RT" method) tag] box]])))))
 
-(defn emit-cast [tag cast]
-  (if (not (or (primitive? tag)
-             (primitive? cast)))
-    (when-not (#{Void Void/TYPE} cast)
-      [[:check-cast cast]])
-    (emit-box tag cast)))
+(defn emit-cast
+  ([tag cast] (emit-cast tag cast false))
+  ([tag cast unchecked?]
+     (if (not (or (primitive? tag)
+                (primitive? cast)))
+       (when-not (#{Void Void/TYPE} cast)
+         [[:check-cast cast]])
+       (emit-box tag cast unchecked?))))
 
 (defn emit
   ([ast]
      (emit ast {}))
-  ([{:keys [env o-tag tag op type] :as ast} frame]
+  ([{:keys [env o-tag tag op type unchecked?] :as ast} frame]
      (let [bytecode (-emit ast frame)
            statement? (= :statement (:context env))
            m (meta bytecode)]
@@ -74,7 +76,7 @@
                      [[:insn :ACONST_NULL]])
                  ~@(when (and (not= tag o-tag)
                               (not= :const op))
-                     (emit-cast o-tag tag))])))))
+                     (emit-cast o-tag tag unchecked?))])))))
 
 (defmethod -emit :import
   [{:keys [class]} frame]
@@ -552,18 +554,17 @@
 
 (defn emit-test-ints
   [{:keys [test test-type] :as ast} frame default-label]
-
   (cond
    (nil? (:tag test))
    ;; reflection warning
    `[~@(emit test frame)
      [:instance-of :java.lang.Number]
      [:if-z-cmp :EQ ~default-label]
-     ~@(emit (assoc test :tag Integer/TYPE) frame)
+     ~@(emit (assoc test :tag Integer/TYPE :unchecked? true) frame)
      ~@(emit-shift-mask ast)]
 
    (numeric? (:tag test))
-   `[~@(emit (assoc test :tag Integer/TYPE) frame)
+   `[~@(emit (assoc test :tag Integer/TYPE :unchecked? true) frame)
      ~@(emit-shift-mask ast)]
 
    :else
@@ -586,15 +587,15 @@
      ~@(emit then frame)]
 
    (= tag Long/TYPE)
-   `[~@(emit (assoc test :tag Long/TYPE) frame)
-     ~@(emit (assoc comp :tag Long/TYPE) frame)
+   `[~@(emit (assoc test :tag Long/TYPE :unchecked? true) frame)
+     ~@(emit (assoc comp :tag Long/TYPE :unchecked? true) frame)
      [:if-cmp :long :NE ~default-label]
      ~@(emit then frame)]
 
    (numeric? tag)
    `[~@(when (not (zero? mask))
-         `[~@(emit (assoc test :tag Long/TYPE) frame)
-           ~@(emit (assoc comp :tag Long/TYPE) frame)
+         `[~@(emit (assoc test :tag Long/TYPE :unchecked? true) frame)
+           ~@(emit (assoc comp :tag Long/TYPE :unchecked? true) frame)
            [:if-cmp :long :NE ~default-label]])
      ~@(emit then frame)]
 
