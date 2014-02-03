@@ -583,7 +583,7 @@
      [:if-z-cmp :EQ ~default-label]
      ~@(emit then frame)]
 
-   (= tag Long)
+   (= tag Long/TYPE)
    `[~@(emit (assoc test :tag Long/TYPE) frame)
      ~@(emit (assoc comp :tag Long/TYPE) frame)
      [:if-cmp :long :NE ~default-label]
