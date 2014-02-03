@@ -23,8 +23,10 @@
      (let [mform (binding [macroexpand-1 a/macroexpand-1]
                    (macroexpand form))]
        (if (and (seq? mform) (= 'do (first mform)))
-         (let [statements (butlast (rest mform))
-               ret (last mform)]
+         (let [[statements ret] (loop [statements [] [e & exprs] mform]
+                                  (if (seq exprs)
+                                    (recur (conj statements e) exprs)
+                                    [statements e]))]
            (doseq [expr statements]
              (eval expr debug?))
            (eval ret debug?))
