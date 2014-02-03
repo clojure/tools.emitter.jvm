@@ -34,7 +34,9 @@
      [[:invoke-static [:clojure.lang.RT/box :boolean] :java.lang.Object]
       [:check-cast :java.lang.Boolean]])
     (when (primitive? box)
-      (let [method (str (.getName ^Class box) "Cast")
+      (let [method (if (and (numeric? box) *unchecked-math*)
+                     (str "unchecked" (s/capitalize (.getName ^Class box)) "Cast")
+                     (str (.getName ^Class box) "Cast"))
             tag (prim-or-obj tag)
             method-sig (str (.getMethod clojure.lang.RT method (into-array Class [tag])))]
         (if-let [ops (intrinsic method-sig)]
