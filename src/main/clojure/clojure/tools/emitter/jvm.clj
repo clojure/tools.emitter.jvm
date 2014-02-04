@@ -23,7 +23,7 @@
      (let [mform (binding [macroexpand-1 a/macroexpand-1]
                    (macroexpand form))]
        (if (and (seq? mform) (= 'do (first mform)))
-         (let [[statements ret] (loop [statements [] [e & exprs] mform]
+         (let [[statements ret] (loop [statements [] [e & exprs] (rest mform)]
                                   (if (seq exprs)
                                     (recur (conj statements e) exprs)
                                     [statements e]))]
