@@ -1153,7 +1153,9 @@
                                                #{mutable}
                                                #{:public :final}))
                                      :tag  o-tag}))
-                           (vals closed-overs))
+                           (if deftype?
+                             fields ;; preserve order
+                             (vals closed-overs)))
 
         ctor-types (into (if meta [:clojure.lang.IPersistentMap] [])
                          (mapv :tag closed-overs))
