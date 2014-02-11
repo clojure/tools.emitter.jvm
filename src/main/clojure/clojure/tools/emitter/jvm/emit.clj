@@ -1158,7 +1158,7 @@
                              (vals closed-overs)))
 
         ctor-types (into (if meta [:clojure.lang.IPersistentMap] [])
-                         (mapv :tag closed-overs))
+                         (mapv (if deftype? (comp prim-or-obj :tag) :tag) closed-overs))
 
         class-ctors [{:op     :method
                       :attr   #{:public :static}
@@ -1185,11 +1185,12 @@
                                        [:load-arg 0]
                                        [:put-field class-name :__meta :clojure.lang.IPersistentMap]])
                                   ~@(mapcat
-                                     (fn [{:keys [name tag]} id]
+                                     (fn [{:keys [name tag]} t id]
                                        `[[:load-this]
                                          ~[:load-arg id]
+                                         ~@(emit-cast t tag)
                                          ~[:put-field class-name name tag]])
-                                     closed-overs (if meta (rest (range)) (range)))
+                                     closed-overs ctor-types (if meta (rest (range)) (range)))
 
                                   [:label ~end-label]
                                   [:return-value]
