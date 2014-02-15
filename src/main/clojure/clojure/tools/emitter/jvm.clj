@@ -10,6 +10,7 @@
   (:refer-clojure :exclude [eval macroexpand-1 load])
   (:require [clojure.tools.analyzer.jvm :as a]
             [clojure.tools.analyzer :refer [macroexpand-1]]
+            [clojure.tools.analyzer.ast :refer [prewalk]]
             [clojure.tools.emitter.jvm.emit :as e]
             [clojure.java.io :as io]
             [clojure.string :as s]
@@ -30,9 +31,13 @@
            (doseq [expr statements]
              (eval expr debug?))
            (eval ret debug?))
-         (let [r (e/emit (a/analyze `(^:once ^:top-level fn* [] ~mform) (a/empty-env))
-                         {:debug? debug?
-                          :class-loader (clojure.lang.RT/makeClassLoader)})
+         (let [r (-> (a/analyze `(^:once ^:top-level fn* [] ~mform) (a/empty-env))
+                   (prewalk (fn [ast]
+                              (if (#{:reify :fn} (:op ast))
+                                (assoc ast :class-id (gensym))
+                                ast)))
+                   (e/emit {:debug? debug?
+                            :class-loader (clojure.lang.RT/makeClassLoader)}))
                {:keys [class]} (meta r)]
            (.invoke ^IFn (.newInstance ^Class class)))))))
 
