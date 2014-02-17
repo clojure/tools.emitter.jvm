@@ -573,7 +573,7 @@
 (defn emit-test-hashes
   [{:keys [test] :as ast} frame]
   `[~@(emit test frame)
-    [:invoke-static [:clojure.lang.Util/hasheq :java.lang.Object] :int]
+    [:invoke-static [:clojure.lang.Util/hash :java.lang.Object] :int]
     ~@(emit-shift-mask ast)])
 
 (defn emit-then-ints
