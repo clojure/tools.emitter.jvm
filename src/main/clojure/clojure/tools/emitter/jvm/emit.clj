@@ -404,35 +404,47 @@
         (mapv (fn [op] [:insn op]) ops)))))
 
 (defmethod -emit :static-call
-  [{:keys [env o-tag validated? args method ^Class class false-label] :as ast} frame]
+  [{:keys [env o-tag validated? args method ^Class class false-label to-clear?] :as ast} frame]
   (if validated?
     `[~@(emit-line-number env)
       ~@(mapcat #(emit % frame) args)
       ~@(or
          (emit-intrinsic ast)
-         `[[:invoke-static [~(keyword (.getName class) (str method))
+         `[~@(when to-clear?
+               [[:insn :ACONST_NULL]
+                [:var-insn :clojure.lang.Object/ISTORE 0]])
+           [:invoke-static [~(keyword (.getName class) (str method))
                             ~@(mapv :tag args)] ~o-tag]])]
     `[[:push ~(.getName class)]
       [:invoke-static [:java.lang.Class/forName :java.lang.String] :java.lang.Class]
       [:push ~(str method)]
       ~@(emit-as-array args frame)
+      ~@(when to-clear?
+          [[:insn :ACONST_NULL]
+           [:var-insn :clojure.lang.Object/ISTORE 0]])
       [:invoke-static [:clojure.lang.Reflector/invokeStaticMethod
                        :java.lang.Class :java.lang.String :objects]
        :java.lang.Object]]))
 
 (defmethod -emit :instance-call
-  [{:keys [env o-tag validated? args method ^Class class instance]} frame]
+  [{:keys [env o-tag validated? args method ^Class class instance to-clear?]} frame]
   (if validated?
     `[~@(emit-line-number env)
       ~@(emit (assoc instance :tag class) frame)
       ~@(mapcat #(emit % frame) args)
-      [~(if (.isInterface class)
+      [~@(when to-clear?
+           [[:insn :ACONST_NULL]
+            [:var-insn :clojure.lang.Object/ISTORE 0]])
+       ~(if (.isInterface class)
           :invoke-interface
           :invoke-virtual)
        [~(keyword (.getName class) (str method)) ~@(mapv :tag args)] ~o-tag]]
     `[~@(emit instance frame)
       [:push ~(str method)]
       ~@(emit-as-array args frame)
+      ~@(when to-clear?
+          [[:insn :ACONST_NULL]
+           [:var-insn :clojure.lang.Object/ISTORE 0]])
       [:invoke-static [:clojure.lang.Reflector/invokeInstanceMethod
                        :java.lang.Object :java.lang.String :objects]
        :java.lang.Object]]))
@@ -482,23 +494,23 @@
 (defn emit-args-and-invoke
   ([args frame] (emit-args-and-invoke args frame false))
   ([args {:keys [to-clear?] :as frame} proto?]
-     (let [frame (dissoc frame to-clear?)]
+     (let [frame (dissoc frame :to-clear?)]
        `[~@(mapcat #(emit % frame) (take 19 args))
          ~@(when-let [args (seq (drop 19 args))]
              (emit-as-array args frame))
          ~@(when to-clear?
              [[:insn :ACONST_NULL]
-              [:var-insn :clojure.lang.AFunction/ISTORE 0]])
+              [:var-insn :clojure.lang.Object/ISTORE 0]])
          [:invoke-interface [:clojure.lang.IFn/invoke ~@(repeat (min 20 (count args)) :java.lang.Object) ~@(when proto? [:java.lang.Object])] :java.lang.Object]])))
 
 (defmethod -emit :invoke
-  [{:keys [fn args env]} frame]
+  [{:keys [fn args env to-clear?]} frame]
   `[~@(emit fn frame)
     [:check-cast :clojure.lang.IFn]
-    ~@(emit-args-and-invoke args (assoc frame :to-clear? (:to-clear? env)))])
+    ~@(emit-args-and-invoke args (assoc frame :to-clear? to-clear?))])
 
 (defmethod -emit :protocol-invoke
-  [{:keys [fn args env]} frame]
+  [{:keys [fn args env to-clear?]} frame]
   (let [[on-label call-label end-label] (repeatedly label)
         v (:var fn)
         [target & args] args
@@ -524,12 +536,15 @@
       ~@(emit-var v frame)
       [:invoke-virtual [:clojure.lang.Var/getRawRoot] :java.lang.Object]
       [:swap]
-      ~@(emit-args-and-invoke args frame true)
+      ~@(emit-args-and-invoke args (assoc frame :to-clear? to-clear?) true)
       [:go-to ~end-label]
 
       [:mark ~on-label]
 
       ~@(mapcat #(emit % frame) args)
+      ~@(when to-clear?
+          [[:insn :ACONST_NULL]
+           [:var-insn :clojure.lang.Object/ISTORE 0]])
       [:invoke-interface [~(keyword (.getName pinterface)
                                     (munge (name (:form fn))))
                           ~@(repeat (count args) :java.lang.Object)] :java.lang.Object]
@@ -537,10 +552,13 @@
       [:mark ~end-label]]))
 
 (defmethod -emit :prim-invoke
-  [{:keys [fn args ^Class prim-interface o-tag]} frame]
+  [{:keys [fn args ^Class prim-interface o-tag to-clear?]} frame]
   `[~@(emit fn frame)
     [:check-cast ~prim-interface]
     ~@(mapcat #(emit % frame) args)
+    ~@(when to-clear?
+        [[:insn :ACONST_NULL]
+         [:var-insn :clojure.lang.Object/ISTORE 0]])
     [:invoke-interface [~(keyword (.getName prim-interface) "invokePrim")
                         ~@(mapv :tag args)] ~o-tag]])
 
@@ -848,7 +866,6 @@
   (let [to-clear? (and to-clear?
                        (not (primitive? o-tag)))]
     (cond
-
      (closed-overs name)
      `[[:load-this]
        ~[:get-field class name o-tag]
