@@ -1326,10 +1326,10 @@
            :methods     `[~@class-ctors ~@defrecord-ctor ~@deftype-methods
                           ~@variadic-method ~@meta-methods
                           ~@(mapcat #(-emit % frame) methods)]}
-
           class (or (@class-cache class-id)
                     (let [class (.defineClass ^clojure.lang.DynamicClassLoader class-loader class-name (t/-compile jvm-ast) nil)]
-                      (swap! class-cache assoc class-id class)
+                      (when class-id
+                        (swap! class-cache assoc class-id class))
                       class))]
       (if deftype?
         [[:insn :ACONST_NULL]]
