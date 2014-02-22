@@ -127,40 +127,33 @@
       (.byteValue ^Number el))
     (clojure.core/cast to el)))
 
-(defn emit-constant
-  [const frame c-tag]
-  (let [{:keys [id tag]} (get-in frame [:constants {:form const :meta (meta const) :tag c-tag}])]
-    ^:const
-    [(case const
-       (true false)
-       (if (primitive? c-tag)
-         [:push const]
-         [:get-static (if const :java.lang.Boolean/TRUE :java.lang.Boolean/FALSE)
-          :java.lang.Boolean])
-
-       nil
-       [:insn :ACONST_NULL]
-
-       (if (or (primitive? c-tag)
-               (string? const))
-         [:push (cast (or (box c-tag) (class const)) const)]
-         [:get-static (frame :class) (str "const__" id) tag]))]))
-
 (defmethod -emit :const
-  [{:keys [val tag] :as ast} frame]
-  (emit-constant val frame tag))
+  [{:keys [val id tag] :as ast} frame]
+  ^:const
+  [(case val
+     (true false)
+     (if (primitive? tag)
+       [:push val]
+       [:get-static (if val :java.lang.Boolean/TRUE :java.lang.Boolean/FALSE)
+        :java.lang.Boolean])
+
+     nil
+     [:insn :ACONST_NULL]
+
+     (if (or (primitive? tag)
+             (string? val))
+       [:push (cast (or (box tag) (class val)) val)]
+       [:get-static (frame :class) (str "const__" id) tag]))])
 
 (defmethod -emit :quote
   [{:keys [expr]} frame]
   (-emit expr frame))
 
-(defn emit-var [var frame]
-  (emit-constant var frame clojure.lang.Var))
-
 (defmethod -emit :var
-  [{:keys [var]} frame]
+  [{:keys [var id]} frame]
   (conj
-   (emit-var var frame)
+   ^:const
+   [[:get-static (frame :class) (str "const__" id) clojure.lang.Var]]
    [:invoke-virtual [(if (u/dynamic? var)
                        :clojure.lang.Var/get
                        :clojure.lang.Var/getRawRoot)] :java.lang.Object]))
@@ -1120,9 +1113,13 @@
                                          (#{:string :bool} type)))
                                   constants))
 
+          consts (vals constants)
+          constant-table (zipmap (mapv :id consts) consts)
+
           frame (merge frame
                        {:class              class-name
                         :constants          constants
+                        :constant-table     constant-table
                         :closed-overs       closed-overs
                         :keyword-callsites  keyword-callsites
                         :protocol-callsites protocol-callsites})
@@ -1132,7 +1129,7 @@
                           :attr #{:public :final :static}
                           :name (str "const__" id)
                           :tag  tag})
-                       (vals constants))
+                       consts)
 
           meta-field (when meta
                        [{:op   :field
