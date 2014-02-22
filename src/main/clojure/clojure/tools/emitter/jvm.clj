@@ -39,7 +39,7 @@
 (defn load
   ([res] (load res false))
   ([res debug?]
-     (let [p    (str (s/replace res #"\." "/") ".clj")
+     (let [p    (str (s/replace (munge res) #"\." "/") ".clj")
            eof  (reify)
            p (if (.startsWith p "/") (subs p 1) p)
            file (-> p io/resource io/reader slurp)
