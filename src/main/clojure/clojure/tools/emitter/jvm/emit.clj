@@ -149,28 +149,32 @@
   [{:keys [expr]} frame]
   (-emit expr frame))
 
+(defn emit-var
+  [{:keys [id]} frame]
+  ^:const
+  [[:get-static (frame :class) (str "const__" id) clojure.lang.Var]])
+
 (defmethod -emit :var
-  [{:keys [var id]} frame]
+  [{:keys [var] :as ast} frame]
   (conj
-   ^:const
-   [[:get-static (frame :class) (str "const__" id) clojure.lang.Var]]
+   (emit-var ast frame)
    [:invoke-virtual [(if (u/dynamic? var)
                        :clojure.lang.Var/get
                        :clojure.lang.Var/getRawRoot)] :java.lang.Object]))
 
 (defmethod -emit-set! :var
-  [{:keys [target val]} frame]
-  `[~@(emit-var (:var target) frame)
+  [{:keys [target val] :as ast} frame]
+  `[~@(emit-var target frame)
     ~@(emit val frame)
     [:invoke-virtual [:clojure.lang.Var/set :java.lang.Object] :java.lang.Object]])
 
 (defmethod -emit :the-var
-  [{:keys [var]} frame]
-  (emit-var var frame))
+  [ast frame]
+  (emit-var ast frame))
 
 (defmethod -emit :def
-  [{:keys [var meta init env]} frame]
-  `[~@(emit-var var frame)
+  [{:keys [var meta init env] :as ast} frame]
+  `[~@(emit-var ast frame)
     ~@(when (u/dynamic? var) ;; why not when macro?
         [[:push true]
          [:invoke-virtual [:clojure.lang.Var/setDynamic :boolean] :clojure.lang.Var]])
@@ -526,7 +530,7 @@
       [:put-static ~(frame :class) ~(str "cached__class__" id) :java.lang.Class]
 
       [:mark ~call-label]
-      ~@(emit-var v frame)
+      ~@(emit-var fn frame)
       [:invoke-virtual [:clojure.lang.Var/getRawRoot] :java.lang.Object]
       [:swap]
       ~@(emit-args-and-invoke args (assoc frame :to-clear? to-clear?) true)
