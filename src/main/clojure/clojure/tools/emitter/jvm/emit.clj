@@ -429,10 +429,10 @@
     `[~@(emit-line-number env)
       ~@(emit (assoc instance :tag class) frame)
       ~@(mapcat #(emit % frame) args)
-      [~@(when to-clear?
+      ~@(when to-clear?
            [[:insn :ACONST_NULL]
             [:var-insn :clojure.lang.Object/ISTORE 0]])
-       ~(if (.isInterface class)
+      [~(if (.isInterface class)
           :invoke-interface
           :invoke-virtual)
        [~(keyword (.getName class) (str method)) ~@(mapv :tag args)] ~o-tag]]
