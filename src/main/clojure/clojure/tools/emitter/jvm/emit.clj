@@ -663,12 +663,14 @@
      [:mark ~end-label]]))
 
 (defn emit-bindings [bindings labels frame]
-  (mapcat (fn [{:keys [init tag name] :as binding} label]
-            `[~@(emit init frame)
-              [:var-insn ~(keyword (.getName ^Class tag) "ISTORE")
-               ~name]
-              ~@(when label
-                  [[:mark label]])])
+  (mapcat (fn [{:keys [init to-clear? tag name] :as binding} label]
+            (if to-clear?
+              (emit (assoc-in init [:env :context] :statement) frame)
+              `[~@(emit init frame)
+               [:var-insn ~(keyword (.getName ^Class tag) "ISTORE")
+                ~name]
+               ~@(when label
+                   [[:mark label]])]))
           bindings labels))
 
 (defn emit-let
@@ -683,7 +685,7 @@
         [:mark ~end-label]
         ~@(mapv (fn [{:keys [name tag]} label]
                   [:local-variable name tag nil label end-label name])
-                bindings labels)]
+                (remove :to-clear? bindings) labels)]
       (if loop? {} {:container true}))))
 
 (defmethod -emit :let
