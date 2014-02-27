@@ -2,8 +2,6 @@
 
 A JVM bytecode generator for ASTs compatible with tools.analyzer[.jvm].
 
-Because currently development is concentrated on the tools.analyzer[.jvm] libraries and there isn't yet a test-suite for this library, consider it much more alpha-quality than tools.analyzer[.jvm].
-
 ## SPONSORSHIP
 
 * Cognitect (http://cognitect.com/) is sponsoring tools.emitter.jvm development (https://groups.google.com/d/msg/clojure/iaP16MHpX0E/EMtnGmOz-rgJ)
@@ -20,11 +18,26 @@ YourKit is kindly supporting open source projects with its full-featured Java Pr
 
 ## Releases and Dependency Information
 
-Currently the library has no stable releases.
+Latest stable release: 0.1.0-alpha1
 
 * [All Released Versions](http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22org.clojure%22%20AND%20a%3A%22tools.emitter.jvm%22)
 
 * [Development Snapshot Versions](https://oss.sonatype.org/index.html#nexus-search;gav%7Eorg.clojure%7Etools.emitter.jvm%7E%7E%7E)
+
+[Leiningen](https://github.com/technomancy/leiningen) dependency information:
+
+```clojure
+[org.clojure/tools.emitter.jvm "0.1.0-alpha1"]
+```
+[Maven](http://maven.apache.org/) dependency information:
+
+```xml
+<dependency>
+  <groupId>org.clojure</groupId>
+  <artifactId>tools.emitter.jvm</artifactId>
+  <version>0.1.0-alpha1</version>
+</dependency>
+```
 
 Developer Information
 ========================================
