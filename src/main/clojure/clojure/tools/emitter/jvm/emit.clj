@@ -559,6 +559,36 @@
     [:invoke-interface [~(keyword (.getName prim-interface) "invokePrim")
                         ~@(mapv :tag args)] ~o-tag]])
 
+(defmethod -emit :regex-invoke
+  [{:keys [fn args]} frame]
+  (let [[loop-label end-label null-label call-label] (repeatedly label)]
+    `[[:insn :ACONST_NULL]
+      ~@(emit fn frame)
+      ~@(mapcat #(emit % frame) args)
+      [:invoke-virtual [:java.util.regex.Pattern/matcher :java.lang.CharSequence]
+       :java.util.regex.Matcher]
+      [:mark ~loop-label]
+      [:dup]
+      [:invoke-virtual [:java.util.regex.Matcher/find] :boolean]
+      [:if-z-cmp :EQ ~end-label]
+      [:dup-x1]
+      [:invoke-virtual [:java.util.regex.Matcher/group] :java.lang.String]
+      [:swap]
+      [:dup]
+      [:if-null ~null-label]
+      [:go-to ~call-label]
+      [:mark ~null-label]
+      [:pop]
+      [:get-static :clojure.lang.PersistentVector/EMPTY :clojure.lang.PersistentVector]
+      [:mark ~call-label]
+      [:swap]
+      [:invoke-interface [:clojure.lang.IPersistentCollection/cons :java.lang.Object]
+       :clojure.lang.IPersistentCollection]
+      [:swap]
+      [:go-to ~loop-label]
+      [:mark ~end-label]
+      [:pop]]))
+
 (defn emit-shift-mask
   [{:keys [shift mask]}]
   (when (not (zero? mask))
