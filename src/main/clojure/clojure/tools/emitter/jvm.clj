@@ -21,7 +21,7 @@
   ([form] (eval form false))
   ([form debug?]
      (let [mform (binding [macroexpand-1 a/macroexpand-1]
-                   (macroexpand form))]
+                   (macroexpand form (a/empty-env)))]
        (if (and (seq? mform) (= 'do (first mform)))
          (let [[statements ret] (loop [statements [] [e & exprs] (rest mform)]
                                   (if (seq exprs)
