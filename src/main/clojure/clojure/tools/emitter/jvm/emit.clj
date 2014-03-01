@@ -1367,11 +1367,11 @@
       {:untyped true})))
 
 (defmethod -emit :fn
-  [{:keys [local form name class-name local variadic?] :as ast}
+  [{:keys [local form internal-name local variadic?] :as ast}
    {:keys [class top-level] :as frame}]
   (let [class-name (str (or (munge (ns-name *ns*)))
                         "$"
-                        (munge name))
+                        (munge internal-name))
         super (if variadic? :clojure.lang.RestFn :clojure.lang.AFunction)
         ast (assoc ast
               :class-name class-name
