@@ -30,7 +30,7 @@
            (doseq [expr statements]
              (eval expr debug?))
            (eval ret debug?))
-         (let [r (-> (a/analyze `(^:once ^:top-level fn* [] ~mform) (a/empty-env))
+         (let [r (-> (a/analyze `(^:once fn* [] ~mform) (a/empty-env))
                    (e/emit {:debug? debug?
                             :class-loader (clojure.lang.RT/makeClassLoader)}))
                {:keys [class]} (meta r)]

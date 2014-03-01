@@ -1367,8 +1367,8 @@
       {:untyped true})))
 
 (defmethod -emit :fn
-  [{:keys [local form internal-name local variadic?] :as ast}
-   {:keys [class top-level] :as frame}]
+  [{:keys [form internal-name variadic?] :as ast}
+   frame]
   (let [class-name (str (or (munge (ns-name *ns*)))
                         "$"
                         (munge internal-name))
@@ -1376,6 +1376,4 @@
         ast (assoc ast
               :class-name class-name
               :super super)]
-    (emit-class ast (assoc frame
-                      :top-level (and (not top-level)
-                                      (-> form first meta :top-level))))))
+    (emit-class ast frame)))
