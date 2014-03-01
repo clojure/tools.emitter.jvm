@@ -666,8 +666,7 @@
   (mapcat (fn [{:keys [init to-clear? tag name] :as binding} label]
             `[~@(emit init frame)
               ~@(when-not to-clear?
-                  [[:var-insn ~(keyword (.getName ^Class tag) "ISTORE")
-                     ~name]])
+                  [[:var-insn (keyword (.getName ^Class tag) "ISTORE") name]])
               ~@(when label
                   [[:mark label]])])
           bindings labels))
