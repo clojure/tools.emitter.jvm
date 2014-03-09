@@ -7,36 +7,61 @@
 ;;   You must not remove this notice, or any other, from this software.
 
 (ns clojure.tools.emitter.jvm.transform
-  (:refer-clojure :exclude [type])
+  (:refer-clojure :exclude [type ints longs floats doubles chars shorts bytes booleans])
   (:require [clojure.string :as s]
             [clojure.tools.analyzer.jvm.utils :refer [maybe-class]]
             [clojure.tools.analyzer.utils :refer [boolean?]]
-            [clojure.core.memoize :refer [lru]])
+            [clojure.core.memoize :refer [lru]]
+            [clojure.reflect :refer [typename]])
   (:import (org.objectweb.asm Type Label Opcodes ClassWriter ClassReader)
            (org.objectweb.asm.commons GeneratorAdapter Method)
            (org.objectweb.asm.util CheckClassAdapter TraceClassVisitor)))
+
+(def ^:const objects (class (object-array [])))
+(def ^:const ints (class (int-array [])))
+(def ^:const longs (class (long-array [])))
+(def ^:const floats (class (float-array [])))
+(def ^:const doubles (class (double-array [])))
+(def ^:const chars (class (char-array [])))
+(def ^:const shorts (class (short-array [])))
+(def ^:const bytes (class (byte-array [])))
+(def ^:const booleans (class (boolean-array [])))
+
+
+(defn special [c]
+  (case (name c)
+    "int" Integer/TYPE
+    "float" Float/TYPE
+    "void" Void/TYPE
+    "long" Long/TYPE
+    "byte" Byte/TYPE
+    "short" Short/TYPE
+    "char" Character/TYPE
+    "double" Double/TYPE
+    "boolean" Boolean/TYPE
+
+    "objects" objects
+    "ints" ints
+    "longs" longs
+    "floats" floats
+    "doubles" doubles
+    "chars" chars
+    "shorts" shorts
+    "bytes" bytes
+    "booleans" booleans
+
+    nil))
 
 (def type-str
   (lru
    (fn [x]
      (cond
 
-      (= :objects x)
-      "java.lang.Object[]"
-
       (class? x)
-      (let [class ^Class x
-            n (.getName class)]
-        (cond
+      (typename x)
 
-         (.endsWith n ";")
-         (str (subs n 2 (dec (count n))) "[]")
-
-         (.startsWith n "[")
-         (.getCanonicalName ^Class x)
-
-         :else
-         n))
+      (special x)
+      (typename (special x))
 
       :else
       (name x)))))
@@ -80,23 +105,6 @@
         (when-not (omit? pre cur (first bc))
           (-exec inst args gen))
         (recur cur (first bc) (next bc))))))
-
-(def ^:const objects (Class/forName "[Ljava.lang.Object;"))
-
-(defn special [c]
-  (case (name c)
-    "int" Integer/TYPE
-    "float" Float/TYPE
-    "void" Void/TYPE
-    "long" Long/TYPE
-    "byte" Byte/TYPE
-    "char" Character/TYPE
-    "double" Double/TYPE
-    "boolean" Boolean/TYPE
-
-    "objects" objects
-
-    nil))
 
 (def ^Class get-class
   (lru
