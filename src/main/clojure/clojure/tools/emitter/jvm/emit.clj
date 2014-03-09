@@ -1369,7 +1369,7 @@
 (defmethod -emit :fn
   [{:keys [form internal-name variadic?] :as ast}
    frame]
-  (let [class-name (str (or (munge (ns-name *ns*)))
+  (let [class-name (str (namespace-munge *ns*)
                         "$"
                         (munge internal-name))
         super (if variadic? :clojure.lang.RestFn :clojure.lang.AFunction)
