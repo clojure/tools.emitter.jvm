@@ -1006,6 +1006,8 @@
          (and hmap? (<= (count m) 8))
          [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
           [:invoke-static [:clojure.lang.PersistentHashMap/create :clojure.lang.ISeq] :clojure.lang.PersistentHashMap]]
+         (and (= clojure.lang.PersistentArrayMap (class m)) (> (count m) 8))
+         [[:invoke-static [:clojure.lang.PersistentArrayMap/createAsIfByAssoc :objects] :clojure.lang.PersistentArrayMap]]
          :else
          [[:invoke-static [:clojure.lang.RT/map :objects] :clojure.lang.IPersistentMap]])]))
 
