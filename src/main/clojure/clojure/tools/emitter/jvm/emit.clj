@@ -747,12 +747,12 @@
 
 (defmethod -emit :recur
   [{:keys [exprs]} {:keys [loop-label loop-locals] :as frame}]
-  `[~@(mapcat (fn [{:keys [local tag] :as arg} {:keys [name arg-id] :as binding}]
-                `[~@(emit arg frame)
-                  ~(if (= :arg local)
-                     [:store-arg (:arg-id binding)]
-                     [:var-insn (keyword (.getName ^Class tag) "ISTORE")
-                      name])]) exprs loop-locals)
+  `[~@(mapcat (fn [arg] (emit arg frame)) exprs)
+    ~@(rseq (mapv (fn [{:keys [local tag] :as arg} {:keys [name] :as binding}]
+                    (if (= :arg local)
+                      [:store-arg (:arg-id binding)]
+                      [:var-insn (keyword (.getName ^Class tag) "ISTORE") name]))
+                  exprs loop-locals))
     [:go-to ~loop-label]])
 
 (defmethod -emit :fn-method
