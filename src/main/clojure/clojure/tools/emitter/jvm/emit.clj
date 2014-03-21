@@ -175,7 +175,7 @@
 (defmethod -emit :def
   [{:keys [var meta init env] :as ast} frame]
   `[~@(emit-var ast frame)
-    ~@(when (u/dynamic? var) ;; why not when macro?
+    ~@(when (u/dynamic? var)
         [[:push true]
          [:invoke-virtual [:clojure.lang.Var/setDynamic :boolean] :clojure.lang.Var]])
     ~@(when meta
@@ -185,7 +185,10 @@
     ~@(when init
         `[[:dup]
           ~@(emit init frame)
-          [:invoke-virtual [:clojure.lang.Var/bindRoot :java.lang.Object] :void]])])
+          [:invoke-virtual [:clojure.lang.Var/bindRoot :java.lang.Object] :void]])
+    ~@(when (u/macro? var)
+        [[:dup]
+         [:invoke-virtual [:clojure.lang.Var/setMacro] :void]])])
 
 (defmethod -emit :set!
   [ast frame]
