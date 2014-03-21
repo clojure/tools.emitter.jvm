@@ -462,7 +462,7 @@
   (let [cv (ClassWriter. ClassWriter/COMPUTE_MAXS)
         interfaces (into interfaces (keep :interface methods))]
 
-    (.visit cv Opcodes/V1_5 (compute-attr attr) (:name c) nil (name super)
+    (.visit cv Opcodes/V1_6 (compute-attr attr) (:name c) nil (name super)
             (into-array String (mapv (fn [i] (s/replace (type-str i) \. \/)) interfaces)))
 
     (.visitSource cv (:name c) nil)
