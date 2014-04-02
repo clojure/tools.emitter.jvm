@@ -1280,14 +1280,14 @@
                                      [:return-value]
                                      [:end-method]]}])
 
-          deftype-fields (vec (remove '#{__meta __extmap} (mapv (comp munge :form) closed-overs)))
+          deftype-fields (vec (remove '#{__meta __extmap} (mapv :form closed-overs)))
 
           deftype-methods (when deftype?
                             `[~{:op     :method
                                 :attr   #{:public :static}
                                 :method [[:getBasis] :clojure.lang.IPersistentVector]
                                 :code   `[[:start-method]
-                                          ~@(emit-value :vector deftype-fields)
+                                          ~@(emit-value :vector (mapv munge deftype-fields))
                                           [:return-value]
                                           [:end-method]]}
                               ~@(when defrecord?
