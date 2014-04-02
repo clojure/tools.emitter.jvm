@@ -1280,7 +1280,7 @@
                                      [:return-value]
                                      [:end-method]]}])
 
-          deftype-fields (vec (remove '#{__meta __extmap} (mapv :form closed-overs)))
+          deftype-fields (vec (remove '#{__meta __extmap} (mapv (comp munge :form) closed-overs)))
 
           deftype-methods (when deftype?
                             `[~{:op     :method
