@@ -45,7 +45,8 @@
            file (-> p io/resource io/reader slurp)
            reader (readers/indexing-push-back-reader file)]
        (with-redefs [clojure.core/load load]
-         (binding [*ns* *ns*]
+         (binding [*ns* *ns*
+                   *file* p]
            (loop []
              (let [form (r/read reader false eof)]
                (when (not= eof form)
