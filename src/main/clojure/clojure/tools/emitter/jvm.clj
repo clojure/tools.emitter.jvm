@@ -40,10 +40,10 @@
   ([res] (load res false))
   ([res debug?]
      (let [p    (str (apply str (replace {\. \/ \- \_} res)) ".clj")
-           eof  (reify)
+           eof  (Object.)
            p (if (.startsWith p "/") (subs p 1) p)
            file (-> p io/resource io/reader slurp)
-           reader (readers/indexing-push-back-reader file)]
+           reader (readers/indexing-push-back-reader file 1 p)]
        (with-redefs [clojure.core/load load]
          (binding [*ns* *ns*
                    *file* p]
