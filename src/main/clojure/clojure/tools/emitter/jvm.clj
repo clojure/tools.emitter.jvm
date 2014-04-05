@@ -36,19 +36,22 @@
                {:keys [class]} (meta r)]
            (.invoke ^IFn (.newInstance ^Class class)))))))
 
+(def root-directory @#'clojure.core/root-directory)
+
 (defn load
   ([res] (load res false))
   ([res debug?]
      (let [p    (str (apply str (replace {\. \/ \- \_} res)) ".clj")
            eof  (Object.)
-           p (if (.startsWith p "/") (subs p 1) p)
+           p (if (.startsWith p "/")
+               (subs p 1)
+               (subs (str (root-directory (ns-name *ns*)) "/" p) 1))
            file (-> p io/resource io/reader slurp)
            reader (readers/indexing-push-back-reader file 1 p)]
-       (with-redefs [clojure.core/load load]
-         (binding [*ns* *ns*
-                   *file* p]
-           (loop []
-             (let [form (r/read reader false eof)]
-               (when (not= eof form)
-                 (eval form debug?)
-                 (recur)))))))))
+       (binding [*ns* *ns*
+                 *file* p]
+         (loop []
+           (let [form (r/read reader false eof)]
+             (when (not= eof form)
+               (eval form debug?)
+               (recur))))))))
