@@ -392,7 +392,7 @@
     `[[:push ~(.getName class)]
       [:invoke-static [:java.lang.Class/forName :java.lang.String] :java.lang.Class]
       ~@(emit-as-array args frame)
-      [:invoke-static [:clojure.lang.Reflector/invokeCostructor :java.lang.Class :objects] :java.lang.Object]]))
+      [:invoke-static [:clojure.lang.Reflector/invokeConstructor :java.lang.Class :objects] :java.lang.Object]]))
 
 (defn emit-intrinsic [{:keys [args method ^Class class false-label]}]
   (let [m (str (.getMethod class (name method) (into-array Class (mapv :tag args))))]
