@@ -12,7 +12,7 @@
             [clojure.tools.analyzer.jvm.utils :refer [maybe-class]]
             [clojure.tools.analyzer.utils :refer [boolean?]]
             [clojure.core.memoize :refer [lru]]
-            [clojure.reflect :refer [typename]])
+            [clojure.reflect :as r])
   (:import (org.objectweb.asm Type Label Opcodes ClassWriter ClassReader)
            (org.objectweb.asm.commons GeneratorAdapter Method)
            (org.objectweb.asm.util CheckClassAdapter TraceClassVisitor)))
@@ -52,19 +52,19 @@
 
     nil))
 
-(def type-str
-  (lru
-   (fn [x]
-     (cond
+(def typename (lru r/typename))
 
-      (class? x)
-      (typename x)
+(defn type-str [x]
+  (cond
 
-      (special x)
-      (typename (special x))
+   (class? x)
+   (typename x)
 
-      :else
-      (name x)))))
+   (special x)
+   (typename (special x))
+
+   :else
+   (name x)))
 
 (defn method-desc [ret method args]
   (Method/getMethod (str (type-str ret) " "
