@@ -449,7 +449,7 @@
         m (method-desc ret method-name args)
         gen (GeneratorAdapter. (compute-attr attr) m nil nil cv)]
 
-    (transform gen code)))
+    (transform gen (seq code))))
 
 (defmethod -compile :field
   [{:keys [attr tag cv] :as f}]
