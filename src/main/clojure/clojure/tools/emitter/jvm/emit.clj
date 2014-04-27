@@ -977,14 +977,15 @@
     :clojure.lang.Var]])
 
 (defn emit-values-as-array [list]
-  `[[:push ~(int (count list))]
-    [:new-array :java.lang.Object]
-    ~@(mapcat (fn [i item]
-                `[[:dup]
-                  [:push ~(int i)]
-                  ~@(emit-value (u/classify item) item)
-                  [:array-store :java.lang.Object]])
-              (range) list)])
+  (when (seq list)
+    `[[:push ~(int (count list))]
+      [:new-array :java.lang.Object]
+      ~@(mapcat (fn [i item]
+                  `[[:dup]
+                    [:push ~(int i)]
+                    ~@(emit-value (u/classify item) item)
+                    [:array-store :java.lang.Object]])
+                (range) list)]))
 
 (defmethod -emit-value :map [_ m]
   (let [arr (mapcat identity m)
