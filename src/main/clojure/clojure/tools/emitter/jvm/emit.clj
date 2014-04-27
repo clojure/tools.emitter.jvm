@@ -977,40 +977,39 @@
     :clojure.lang.Var]])
 
 (defn emit-values-as-array [list]
-  (when (seq list)
-    `[[:push ~(int (count list))]
-      [:new-array :java.lang.Object]
-      ~@(mapcat (fn [i item]
-                  `[[:dup]
-                    [:push ~(int i)]
-                    ~@(emit-value (u/classify item) item)
-                    [:array-store :java.lang.Object]])
-                (range) list)]))
+  `[[:push ~(int (count list))]
+    [:new-array :java.lang.Object]
+    ~@(mapcat (fn [i item]
+                `[[:dup]
+                  [:push ~(int i)]
+                  ~@(emit-value (u/classify item) item)
+                  [:array-store :java.lang.Object]])
+              (range) list)])
 
 (defmethod -emit-value :map [_ m]
   (let [arr (mapcat identity m)
         sorted? (sorted? m)
         hmap? (= clojure.lang.PersistentHashMap (class m))]
-    `[~@(emit-values-as-array arr)
-      ~@(cond
-         (empty? m)
-         [(cond
-            sorted?
-            [:get-static :clojure.lang.PersistentTreeMap/EMPTY :clojure.lang.PersistentTreeMap]
-            hmap?
-            [:get-static :clojure.lang.PersistentHashMap/EMPTY :clojure.lang.PersistentHashMap]
-            :else
-            [:get-static :clojure.lang.PersistentArrayMap/EMPTY :clojure.lang.PersistentArrayMap])]
-         sorted?
-         [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
-          [:invoke-static [:clojure.lang.PersistentTreeMap/create :clojure.lang.ISeq] :clojure.lang.PersistentTreeMap]]
-         (and hmap? (<= (count m) 8))
-         [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
-          [:invoke-static [:clojure.lang.PersistentHashMap/create :clojure.lang.ISeq] :clojure.lang.PersistentHashMap]]
-         (and (= clojure.lang.PersistentArrayMap (class m)) (> (count m) 8))
-         [[:invoke-static [:clojure.lang.PersistentArrayMap/createAsIfByAssoc :objects] :clojure.lang.PersistentArrayMap]]
-         :else
-         [[:invoke-static [:clojure.lang.RT/map :objects] :clojure.lang.IPersistentMap]])]))
+    (if (empty? m)
+      [(cond
+        sorted?
+        [:get-static :clojure.lang.PersistentTreeMap/EMPTY :clojure.lang.PersistentTreeMap]
+        hmap?
+        [:get-static :clojure.lang.PersistentHashMap/EMPTY :clojure.lang.PersistentHashMap]
+        :else
+        [:get-static :clojure.lang.PersistentArrayMap/EMPTY :clojure.lang.PersistentArrayMap])]
+      `[~@(emit-values-as-array arr)
+        ~@(cond
+           sorted?
+           [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
+            [:invoke-static [:clojure.lang.PersistentTreeMap/create :clojure.lang.ISeq] :clojure.lang.PersistentTreeMap]]
+           (and hmap? (<= (count m) 8))
+           [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
+            [:invoke-static [:clojure.lang.PersistentHashMap/create :clojure.lang.ISeq] :clojure.lang.PersistentHashMap]]
+           (and (= clojure.lang.PersistentArrayMap (class m)) (> (count m) 8))
+           [[:invoke-static [:clojure.lang.PersistentArrayMap/createAsIfByAssoc :objects] :clojure.lang.PersistentArrayMap]]
+           :else
+           [[:invoke-static [:clojure.lang.RT/map :objects] :clojure.lang.IPersistentMap]])])))
 
 (defmethod -emit-value :vector [_ v]
   (if (empty? v)
