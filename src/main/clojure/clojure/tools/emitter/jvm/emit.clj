@@ -705,9 +705,9 @@
                   [:check-cast ~class-name]
 
                   ~@(mapcat (fn [[k c]]
-                              (when (binds c)
-                                `[~@(emit (assoc c :op :local)
-                                          (assoc frame :closed-overs closed-overs))
+                              (when (binds k)
+                                `[[:dup]
+                                  ~@(emit (assoc c :op :local) frame)
                                   ~[:put-field class-name k (:tag c)]]))
                             closed-overs)
 
