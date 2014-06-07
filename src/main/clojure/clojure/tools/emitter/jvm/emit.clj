@@ -53,8 +53,28 @@
        (emit-box tag cast unchecked?))))
 
 (defn emit
+  "(emit ast)
+   (emit ast emit-options-map)
+
+  AST is an analyzed, macroexpanded t.a.jvm AST. emit-options-map is a
+  map, the following values of which are significant. Returns a
+  bytecode descriptor vector for the last compile class annotated with
+  class metadata. All compiled classes are loaded into the
+  class-loader (defaulting to the standard Clojure classloader) for
+  side-effects.
+
+  Options
+  -----------
+  :debug? :- (Option bool)
+    Controls development debug level printing throughout code generation.
+  
+  :class-loader :- (Option classloader)
+    A classloader instance which will be used for loading the resulting
+    bytecode into the host JVM."
+
   ([ast]
      (emit ast {}))
+
   ([{:keys [env o-tag tag op type unchecked?] :as ast} frame]
      (let [bytecode (-emit ast frame)
            statement? (= :statement (:context env))
