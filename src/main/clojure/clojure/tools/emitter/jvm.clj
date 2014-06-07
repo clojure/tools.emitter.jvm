@@ -105,5 +105,5 @@
            (let [form (r/read reader false eof)]
              (when (not= eof form)
                (eval form eval-opts)
-               (recur))))))
-     nil))
+               (recur))))
+         nil))))
