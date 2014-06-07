@@ -31,7 +31,7 @@
   :debug? :- (Option Bool)
     Enables or disables printing in eval. Used as the default value for
     printing in the emitter.
-  
+
   :emit-opts :- (Option emit-options-map)
     An options map which will be merged with the default options
     provided to emit. Keys in this map take precidence over the default
@@ -75,11 +75,11 @@
 
   Options
   -----------
-  :debug?
+  :debug? :- (Option Bool)
     Enables or disables printing in eval. Used as the default value for
     printing in the emitter.
-  
-  :eval-opts  :- Option eval-options-map)
+
+  :eval-opts  :- (Option eval-options-map)
     An options map which will be merged with the default options
     provided to eval. Keys set in this map take precidence over the
     default values supplied to eval. The keys which are significant in
