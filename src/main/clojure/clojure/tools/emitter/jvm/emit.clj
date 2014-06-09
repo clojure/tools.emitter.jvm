@@ -70,7 +70,12 @@
   
   :class-loader :- (Option classloader)
     A classloader instance which will be used for loading the resulting
-    bytecode into the host JVM."
+    bytecode into the host JVM.
+
+  :class-atom :- (Option (Atom []))
+    An atom into which class descriptors are conj'd in emission
+    order. Used to implement class colection for the emission of AOT
+    classfiles."
 
   ([ast]
      (emit ast {}))
@@ -1133,7 +1138,10 @@
     [{:keys [class-name meta methods variadic? constants closed-overs keyword-callsites
              protocol-callsites env annotations super interfaces op fields class-id]
       :as ast}
-     {:keys [debug? class-loader] :as frame}]
+     {:keys [debug? class-loader class-atom] :as frame}]
+    {:pre [(or (nil? class-atom)
+               (and (instance? clojure.lang.Atom class-atom)
+                    (vector? @class-atom)))]}
     (let [old-frame frame
 
           constants (into {}
@@ -1352,11 +1360,19 @@
            :methods     `[~@class-ctors ~@defrecord-ctor ~@deftype-methods
                           ~@variadic-method ~@meta-methods
                           ~@(mapcat #(-emit % frame) methods)]}
+          class-bytecode (t/-compile jvm-ast)
           class (or (@class-cache class-id)
-                    (let [class (.defineClass ^clojure.lang.DynamicClassLoader class-loader class-name (t/-compile jvm-ast) nil)]
+                    (let [class (.defineClass ^clojure.lang.DynamicClassLoader class-loader class-name class-bytecode nil)]
                       (when class-id
                         (swap! class-cache assoc class-id class))
                       class))]
+      (when class-atom
+        (swap! class-atom conj {:name         class-names
+                                :id           class-id
+                                :ast          jvm-ast
+                                :raw-class    class
+                                :raw-bytecode class-bytecode}))
+
       (if deftype?
         [[:insn :ACONST_NULL]]
         (with-meta
