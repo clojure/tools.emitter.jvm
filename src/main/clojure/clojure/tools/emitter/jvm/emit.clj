@@ -79,22 +79,16 @@
            (.mkdir (io/file acc))
            (when dirs (recur acc dirs))))
 
-       (let [classfile
-               (-> compile-path
-                   (str sep name ".class")
-                   File.)]
-         (try
-           (doto classfile
-             (.createNewFile)
-             (.write bytecode)
-             (.flush))
-
-           (-> classfile
-               (.getFD)
-               (.sync))
-
-           (finally 
-             (.close classfile)))))))
+       (with-open [classfile (-> compile-path
+                                 (str sep name ".class")
+                                 File.)]
+         (-> classfile
+             (doto 
+                 (.createNewFile)
+               (.write bytecode)
+               (.flush))
+             (.getFD)
+             (.sync))))))
 
 (defn emit
   "(emit ast)
