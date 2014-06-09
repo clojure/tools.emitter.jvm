@@ -83,14 +83,18 @@
                (-> compile-path
                    (str sep name ".class")
                    File.)]
-         (doto classfile
-           (.createNewFile)
-           (.write bytecode)
-           (.flush))
+         (try
+           (doto classfile
+             (.createNewFile)
+             (.write bytecode)
+             (.flush))
 
-         (-> classfile
-             (.getFD)
-             (.sync))))))
+           (-> classfile
+               (.getFD)
+               (.sync))
+
+           (finally 
+             (.close classfile)))))))
 
 (defn emit
   "(emit ast)
