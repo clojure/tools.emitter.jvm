@@ -107,3 +107,28 @@
                (eval form eval-opts)
                (recur))))
          nil))))
+
+(defn compile
+  "(compile resource)
+   (compile resource compile-options-map)
+
+  Resource is a load string identifier for a Clojure resource (source
+  file) on the classpath. Compile-options-map is a map in which the
+  keys descrived under the options header are meaningful.
+
+  Loads, compiles and evaluates the argument resource emitting
+  AOT classfiles. Returns nil.
+
+  Options
+  -----------
+  :debug?
+
+  :load-opts
+
+  :compile-path"
+
+  ([resource]
+     (compile resource {}))
+
+  ([resource options]
+     ))
