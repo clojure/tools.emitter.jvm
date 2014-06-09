@@ -52,6 +52,46 @@
          [[:check-cast cast]])
        (emit-box tag cast unchecked?))))
 
+(defn write-class-file 
+  "(write-class-file name bytecode)
+   (write-class-file compile-path name bytecode)
+
+  name is a String being the Clojure path of the resource being
+  compiled, not the string name of the class being compiled.
+
+  bytecode is the bytecode for the generated class.
+
+  Uses clojure.core/*compile-path* if no explicit path is given."
+
+  ([name bytecode]
+     (write-class-file *compile-path* name bytecode))
+
+  ([compile-path name bytecode]
+     {:pre [(string? compile-path)
+            (string? name)
+            (vector? bytecode)]}
+     (let [dirs (s/split name #"/")
+           sep  File/separator]
+
+       (loop [acc          compile-path
+              [dir & dirs] dirs]
+         (let [acc (str acc sep dir)]
+           (.mkdir (io/file acc))
+           (when dirs (recur acc dirs))))
+
+       (let [classfile
+               (-> compile-path
+                   (str sep name ".class")
+                   File.)]
+         (doto classfile
+           (.createNewFile)
+           (.write bytecode)
+           (.flush))
+
+         (-> classfile
+             (.getFD)
+             (.sync))))))
+
 (defn emit
   "(emit ast)
    (emit ast emit-options-map)
