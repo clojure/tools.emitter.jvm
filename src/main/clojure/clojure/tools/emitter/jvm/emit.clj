@@ -77,7 +77,7 @@
 
   ([{:keys [env o-tag tag op type unchecked?] :as ast} frame]
      (let [bytecode (-emit ast frame)
-           statement? (= :statement (:context env))
+           statement? (= :ctx/statement (:context env))
            m (meta bytecode)]
        (if statement?
          (if (:const m)
@@ -278,7 +278,7 @@
     `^:container
     [[:mark ~start-label]
      ~@(emit body frame)
-     ~@(when (not= :statement context)
+     ~@(when (not= :ctx/statement context)
          [[:astore ret-local]])
      [:mark ~end-label]
      ~@(when finally
@@ -290,7 +290,7 @@
           `[[:mark ~start-label]
             [:astore ~(:name local)]
             ~@(emit body frame)
-            ~@(when (not= :statement context)
+            ~@(when (not= :ctx/statement context)
                 [[:astore ret-local]])
             [:mark ~end-label]
             ~@(when finally
@@ -305,7 +305,7 @@
            [:throw-exception]])
 
      [:mark ~ret-label]
-     ~@(when (not= :statement context)
+     ~@(when (not= :ctx/statement context)
          `[[:aload ~ret-local]])
      [:mark ~(label)]
 
