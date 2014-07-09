@@ -36,7 +36,7 @@
    :name "emit",
    :namespace "clojure.tools.emitter.jvm.emit",
    :source-url
-   "https://github.com/clojure/tools.emitter.jvm/blob/6221fdd8982a07dfb9991c07a28215fb379655bb/src/main/clojure/clojure/tools/emitter/jvm/emit.clj#L55",
+   "https://github.com/clojure/tools.emitter.jvm/blob/6221fdd8982a07dfb9991c07a28215fb379655bb/src/main/clojure/clojure/tools/emitter/jvm/emit.clj#L60",
    :raw-source-url
    "https://github.com/clojure/tools.emitter.jvm/raw/6221fdd8982a07dfb9991c07a28215fb379655bb/src/main/clojure/clojure/tools/emitter/jvm/emit.clj",
    :wiki-url
@@ -44,5 +44,5 @@
    :doc
    "(emit ast)\n (emit ast emit-options-map)\n\nAST is an analyzed, macroexpanded t.a.jvm AST. emit-options-map is a\nmap, the following values of which are significant. Returns a\nbytecode descriptor vector for the last compile class annotated with\nclass metadata. All compiled classes are loaded into the\nclass-loader (defaulting to the standard Clojure classloader) for\nside-effects.\n\nOptions\n-----------\n:debug? :- (Option bool)\n  Controls development debug level printing throughout code generation.\n\n:class-loader :- (Option classloader)\n  A classloader instance which will be used for loading the resulting\n  bytecode into the host JVM.",
    :var-type "function",
-   :line 55,
+   :line 60,
    :file "src/main/clojure/clojure/tools/emitter/jvm/emit.clj"})}
