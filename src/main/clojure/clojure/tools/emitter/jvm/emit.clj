@@ -52,6 +52,11 @@
          [[:check-cast cast]])
        (emit-box tag cast unchecked?))))
 
+(defn emit-pop [tag]
+  (if (#{Double/TYPE Long/TYPE} tag)
+    [:pop2]
+    [:pop]))
+
 (defn emit
   "(emit ast)
    (emit ast emit-options-map)
@@ -86,9 +91,7 @@
                  (when (and (not (:untyped m))
                             (not (:container m))
                             (not= Void/TYPE tag))
-                   (if (#{Double/TYPE Long/TYPE} tag)
-                     [[:pop2]]
-                     [[:pop]]))))
+                   [(emit-pop tag)])))
          (into bytecode
                `[~@(when (and (not (:container m))
                               (or (:untyped m)
@@ -688,8 +691,9 @@
 (defn emit-bindings [bindings labels frame]
   (mapcat (fn [{:keys [init to-clear? tag name] :as binding} label]
             `[~@(emit init frame)
-              ~@(when-not to-clear?
-                  [[:var-insn (keyword (.getName ^Class tag) "ISTORE") name]])
+              ~(if to-clear?
+                 (emit-pop tag)
+                 [:var-insn (keyword (.getName ^Class tag) "ISTORE") name])
               ~@(when label
                   [[:mark label]])])
           bindings labels))
