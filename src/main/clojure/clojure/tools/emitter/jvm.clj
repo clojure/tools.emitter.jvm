@@ -24,9 +24,9 @@
 (defn- compile-and-load
   [{:keys [name class-id] :as class-ast}]
   {:pre [(bound? *class-cache*)
+  {:pre [(bound? #'clojure.tools.emitter.jvm/*class-cache*)
          (instance? clojure.lang.Atom *class-cache*)
-         (bound? *class-loader*)
-         (instance? java.lang.ClassLoader *class-loader*)]}
+         (bound? #'clojure.tools.emitter.jvm/*class-loader*)
   (or (@*class-cache* class-id)
       (let [class (.defineClass *class-loader* name (t/-compile class-ast) nil)]
         (swap! *class-cache* assoc class-id class)
