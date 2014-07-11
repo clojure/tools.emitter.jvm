@@ -11,7 +11,6 @@
   (:require [clojure.tools.analyzer.utils :as u]
             [clojure.tools.analyzer.jvm.utils :refer [primitive? numeric? box prim-or-obj] :as j.u]
             [clojure.string :as s]
-            [clojure.tools.emitter.jvm.transform :as t]
             [clojure.tools.emitter.jvm.intrinsics :refer [intrinsic intrinsic-predicate]])
   (:import clojure.lang.Reflector))
 
