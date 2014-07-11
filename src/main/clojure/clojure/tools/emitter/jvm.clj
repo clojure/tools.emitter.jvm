@@ -55,7 +55,7 @@
 
   Warning
   -----------
-    Eval requires that the *class-loader* and *class-cache* atoms be
+    Eval requires that the *class-loader* and *class-cache* vars be
     bound and will fail if they are not set."
 
   ([form]
