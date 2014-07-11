@@ -26,6 +26,7 @@
   {:pre [(bound? #'clojure.tools.emitter.jvm/*class-cache*)
          (instance? clojure.lang.Atom *class-cache*)
          (bound? #'clojure.tools.emitter.jvm/*class-loader*)
+         (instance? java.lang.ClassLoader *class-cache*)]}
   (or (@*class-cache* class-id)
       (let [class (.defineClass ^clojure.lang.DynamicClassLoader *class-loader* class-name (t/-compile class-ast) nil)]
         (swap! *class-cache* assoc class-id class)
