@@ -52,15 +52,15 @@ namespace.
     <a href="#" style="margin-top: 3px;"></a>
     
   </div><div style="margin-left: 1em;" class="toc-section">
-    <a href="#var-section" style="margin-top: 3px;">Vars and Functions</a>
-    <div style="margin-left: 1em;" class="toc-entry">
-      <a class="toc-entry-anchor" href="#clojure.tools.emitter.jvm/eval">eval</a>
-      
-    </div>
+    <a href="#" style="margin-top: 3px;"></a>
+    
   </div><div style="margin-left: 1em;" class="toc-section">
     <a href="#clojure.tools.emitter.jvm.emit" style="margin-top: 3px;">clojure.tools.emitter.jvm.emit</a>
     <div style="margin-left: 1em;" class="toc-entry">
       <a class="toc-entry-anchor" href="#clojure.tools.emitter.jvm.emit/emit">emit</a>
+      
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a class="toc-entry-anchor" href="#clojure.tools.emitter.jvm.emit/emit-classes">emit-classes</a>
       
     </div>
   </div>
@@ -81,41 +81,7 @@ namespace.
 
 
 
-<div id="var-section">
-  <p></p>
-  <h2>Public Variables and Functions</h2>
-  <div id="var-entry">
-    <br />
-    <hr />
-    <h2 id="clojure.tools.emitter.jvm/eval">eval</h2>
-    <span id="var-type">function</span><br />
-    <pre id="var-usage">Usage: (eval form)
-       (eval form {:keys [debug? emit-opts], :or {debug? false, emit-opts {}}, :as options})
-</pre>
-    <pre id="var-docstr">(eval form)
- (eval form eval-options-map)
 
-Form is a read Clojure s expression represented as a list.
-Eval-options-map is a map, defaulting to the empty map, the
-following values of which are significant. Returns the result of
-evaling the input expression.
-
-Options
------------
-:debug? :- (Option Bool)
-  Enables or disables printing in eval. Used as the default value for
-  printing in the emitter.
-
-:emit-opts :- (Option emit-options-map)
-  An options map which will be merged with the default options
-  provided to emit. Keys in this map take precidence over the default
-  values provided to emit. The keys which are significant in this map
-  are documented in the t.e.jvm.emit/emit docstring.</pre>
-    
-    
-    <a href="https://github.com/clojure/tools.emitter.jvm/blob/61a7375717c6eb64a858d6b7e56c36ed9a246035/src/main/clojure/clojure/tools/emitter/jvm.clj#L20" id="var-source">Source</a>
-  </div>
-</div>
 <br />
 <h2 id="clojure.tools.emitter.jvm.emit">clojure.tools.emitter.jvm.emit</h2>
 <pre id="namespace-docstr"></pre>
@@ -135,27 +101,42 @@ Options
     <pre id="var-usage">Usage: (emit ast)
        (emit {:keys [env o-tag tag op type unchecked?], :as ast} frame)
 </pre>
-    <pre id="var-docstr">(emit ast)
- (emit ast emit-options-map)
+    <pre id="var-docstr">(λ AST) → Bytecode
+(λ AST → Options) → Bytecode
 
-AST is an analyzed, macroexpanded t.a.jvm AST. emit-options-map is a
-map, the following values of which are significant. Returns a
-bytecode descriptor vector for the last compile class annotated with
-class metadata. All compiled classes are loaded into the
-class-loader (defaulting to the standard Clojure classloader) for
-side-effects.
+AST is an analyzed, macroexpanded t.a.jvm AST. Options is a map, the
+following values of which are significant. Returns a (potentially
+empty) sequence of bytecodes. *classes* must be bound before calling
+emit.
 
 Options
 -----------
 :debug? :- (Option bool)
-  Controls development debug level printing throughout code generation.
+  Controls development debug level printing throughout code generation.</pre>
+    
+    
+    <a href="https://github.com/clojure/tools.emitter.jvm/blob/6221fdd8982a07dfb9991c07a28215fb379655bb/src/main/clojure/clojure/tools/emitter/jvm/emit.clj#L61" id="var-source">Source</a>
+  </div><div id="var-entry">
+    <br />
+    <hr />
+    <h2 id="clojure.tools.emitter.jvm.emit/emit-classes">emit-classes</h2>
+    <span id="var-type">function</span><br />
+    <pre id="var-usage">Usage: (emit-classes ast)
+       (emit-classes ast opts)
+</pre>
+    <pre id="var-docstr">(λ AST) → (Seq Class-AST)
+(λ AST → Options) → (Seq Class-AST)
 
-:class-loader :- (Option classloader)
-  A classloader instance which will be used for loading the resulting
-  bytecode into the host JVM.</pre>
+Compiles the given AST into potentially several classes, returning a
+sequence of ASTs defining classes.
+
+Options
+-----------
+:debug :- (Option bool)
+  Controls developlent debug level printing throughout code generation.</pre>
     
     
-    <a href="https://github.com/clojure/tools.emitter.jvm/blob/6221fdd8982a07dfb9991c07a28215fb379655bb/src/main/clojure/clojure/tools/emitter/jvm/emit.clj#L60" id="var-source">Source</a>
+    <a href="https://github.com/clojure/tools.emitter.jvm/blob/6221fdd8982a07dfb9991c07a28215fb379655bb/src/main/clojure/clojure/tools/emitter/jvm/emit.clj#L99" id="var-source">Source</a>
   </div>
 </div>
 
