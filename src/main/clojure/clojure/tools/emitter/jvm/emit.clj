@@ -421,23 +421,25 @@
   (let [m (str (.getMethod class (name method) (into-array Class (mapv :tag args))))]
     (if false-label
       (when-let [ops (intrinsic-predicate m)]
-        (conj (mapv (fn [op] [:insn op]) (butlast ops))
-              [:jump-insn (last ops) false-label]))
+        (with-meta (conj (mapv (fn [op] [:insn op]) (butlast ops))
+                         [:jump-insn (last ops) false-label])
+          {:intrinsic-predicate true}))
       (when-let [ops (intrinsic m)]
         (mapv (fn [op] [:insn op]) ops)))))
 
 (defmethod -emit :static-call
   [{:keys [env o-tag validated? args method ^Class class false-label to-clear?] :as ast} frame]
   (if validated?
-    `[~@(emit-line-number env)
-      ~@(mapcat #(emit % frame) args)
-      ~@(or
-         (emit-intrinsic ast)
-         `[~@(when to-clear?
-               [[:insn :ACONST_NULL]
-                [:var-insn :clojure.lang.Object/ISTORE 0]])
-           [:invoke-static [~(keyword (.getName class) (str method))
-                            ~@(mapv :tag args)] ~o-tag]])]
+    (let [intrinsic (emit-intrinsic ast)]
+      `^{:intrinsic-predicate ~(-> intrinsic meta :intrinsic-predicate)}
+      [~@(emit-line-number env)
+       ~@(mapcat #(emit % frame) args)
+       ~@(or intrinsic
+             `[~@(when to-clear?
+                   [[:insn :ACONST_NULL]
+                    [:var-insn :clojure.lang.Object/ISTORE 0]])
+               [:invoke-static [~(keyword (.getName class) (str method))
+                                ~@(mapv :tag args)] ~o-tag]])])
     `[[:push ~(.getName class)]
       [:invoke-static [:java.lang.Class/forName :java.lang.String] :java.lang.Class]
       [:push ~(str method)]
@@ -498,8 +500,7 @@
     `^:container
     [~@(emit-line-number env)
      ~@test-expr
-     ~@(when (not (and (= :static-call (:op test))
-                     (= :jump-insn (first (last test-expr)))))
+     ~@(when (not (:intrinsic-predicate (meta test-expr)))
          (if (not= (:tag test) Boolean/TYPE)
            [[:dup]
             [:if-null null-label]
