@@ -76,7 +76,6 @@
      (emit ast {}))
 
   ([{:keys [env o-tag tag op type unchecked?] :as ast} frame]
-     {:pre [(vector? @*classes*)]}
      (let [bytecode (-emit ast frame)
            statement? (= :ctx/statement (:context env))
            m (meta bytecode)]
@@ -113,9 +112,10 @@
      (emit-classes ast {}))
 
   ([ast opts]
-     (binding [*classes* (atom [])]
+     (binding [*classes* (atom {:classes []
+                                :ids     #{}})]
        (emit ast opts)
-       @*classes*)))
+       (:classes @*classes*))))
 
 (defmethod -emit :import
   [{:keys [class]} frame]
@@ -760,11 +760,10 @@
   (mapv
    (fn [{:keys [init tag name] :as binding}]
      (let [init (emit init frame)
-           class-name (.getName ^Class (:class (meta init)))]
-       `[~class-name
-         [~@init
-          [:var-insn ~(keyword (.getName ^Class tag) "ISTORE")
-           ~name]]]))
+           class-name (-> init first second)] ;; weak
+       [class-name
+        `[~@init
+          [:var-insn ~(keyword (.getName ^Class tag) "ISTORE") ~name]]]))
    bindings))
 
 (defmethod -emit :letfn
@@ -1363,6 +1362,7 @@
                             :debug?      debug?
                             :attr        #{:public :super :final}
                             :annotations annotations
+                            :class-name  class-name
                             :name        (s/replace class-name \. \/)
                             :super       (s/replace (name super) \. \/)
                             :interfaces  interfaces
@@ -1372,7 +1372,10 @@
                                                  variadic-method meta-methods
                                                  (mapcat #(-emit % frame) methods))}]
 
-    (swap! *classes* conj jvm-ast)
+    (or (get-in @*classes* [:ids class-id])
+        (swap! *classes* update-in [:classes] conj jvm-ast)
+        (when class-id
+          (swap! *classes* update-in [:ids] conj class-id)))
 
     (if deftype?
       [[:insn :ACONST_NULL]]

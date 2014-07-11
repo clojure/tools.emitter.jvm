@@ -16,21 +16,11 @@
             [clojure.string :as s]
             [clojure.tools.reader :as r]
             [clojure.tools.reader.reader-types :as readers])
-  (:import clojure.lang.IFn))
+  (:import (clojure.lang IFn DynamicClassLoader Atom)))
 
-(def ^:dynamic *class-cache*)
-(def ^:dynamic *class-loader*)
-
-(defn- compile-and-load
-  [{:keys [class-name class-id] :as class-ast}]
-  {:pre [(bound? #'clojure.tools.emitter.jvm/*class-cache*)
-         (instance? clojure.lang.Atom *class-cache*)
-         (bound? #'clojure.tools.emitter.jvm/*class-loader*)
-         (instance? java.lang.ClassLoader *class-cache*)]}
-  (or (@*class-cache* class-id)
-      (let [class (.defineClass ^clojure.lang.DynamicClassLoader *class-loader* class-name (t/-compile class-ast) nil)]
-        (swap! *class-cache* assoc class-id class)
-        class)))
+(defn compile-and-load
+  [{:keys [class-name] :as class-ast} class-loader]
+  (.defineClass ^DynamicClassLoader class-loader class-name (t/-compile class-ast) nil))
 
 (defn eval
   "(eval form)
@@ -51,20 +41,16 @@
     An options map which will be merged with the default options
     provided to emit. Keys in this map take precidence over the default
     values provided to emit. The keys which are significant in this map
-    are documented in the t.e.jvm.emit/emit docstring.
-
-  Warning
-  -----------
-    Eval requires that the *class-loader* and *class-cache* vars be
-    bound and will fail if they are not set."
+    are documented in the t.e.jvm.emit/emit docstring."
 
   ([form]
      (eval form {}))
-
-  ([form {:keys [debug? emit-opts]
+  ([form {:keys [debug? emit-opts class-loader]
           :or {debug?    false
-               emit-opts {}}
+               emit-opts {}
+               class-loader (clojure.lang.RT/makeClassLoader)}
           :as options}]
+     {:pre [(instance? DynamicClassLoader class-loader)]}
      (let [mform (binding [macroexpand-1 a/macroexpand-1]
                    (macroexpand form (a/empty-env)))]
        (if (and (seq? mform) (= 'do (first mform)))
@@ -75,15 +61,10 @@
            (doseq [expr statements]
              (eval expr options))
            (eval ret options))
-         (let [r       (-> (a/analyze `(^:once fn* [] ~mform) (a/empty-env))
-                           (e/emit-classes (merge {:debug? debug?} emit-opts)))
-               ;; FIXME:
-               ;;   Using mapv for side-effects is kinda
-               ;;   jank. Arguably something that should be fixed, but
-               ;;   it works.
-               classes (mapv compile-and-load r)
-               class   (last classes)]
-           (.invoke ^IFn (.newInstance ^Class class)))))))
+         (let [cs (-> (a/analyze `(^:once fn* [] ~mform) (a/empty-env))
+                    (e/emit-classes (merge {:debug? debug?} emit-opts)))
+               classes (mapv #(compile-and-load % class-loader) cs)]
+           ((.newInstance ^Class (last classes))))))))
 
 (def root-directory @#'clojure.core/root-directory)
 
@@ -115,13 +96,11 @@
 
   ([res]
      (load res {}))
-
   ([res {:keys [debug? eval-opts class-loader]
          :or   {debug?       false
                 eval-opts    {}
                 class-loader (clojure.lang.RT/makeClassLoader)}
          :as options}]
-     {:pre [(instance? java.lang.ClassLoader class-loader)]}
      (let [p      (str (apply str (replace {\. \/ \- \_} res)) ".clj")
            eof    (Object.)
            p      (if (.startsWith p "/")
@@ -129,13 +108,13 @@
                     (subs (str (root-directory (ns-name *ns*)) "/" p) 1))
            file   (-> p io/resource io/reader slurp)
            reader (readers/indexing-push-back-reader file 1 p)]
-       (binding [*ns*           *ns*
-                 *file*         p
-                 *class-cache*  (atom {})
-                 *class-loader* class-loader]
+       (binding [*ns*   *ns*
+                 *file* p]
          (loop []
            (let [form (r/read reader false eof)]
              (when (not= eof form)
-               (eval form eval-opts)
+               (eval form (merge eval-opts
+                                 (when class-loader
+                                   {:class-loader class-loader})))
                (recur))))
          nil))))
