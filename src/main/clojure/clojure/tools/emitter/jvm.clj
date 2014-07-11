@@ -22,13 +22,12 @@
 (def ^:dynamic *class-loader*)
 
 (defn- compile-and-load
-  [{:keys [name class-id] :as class-ast}]
-  {:pre [(bound? *class-cache*)
+  [{:keys [class-name class-id] :as class-ast}]
   {:pre [(bound? #'clojure.tools.emitter.jvm/*class-cache*)
          (instance? clojure.lang.Atom *class-cache*)
          (bound? #'clojure.tools.emitter.jvm/*class-loader*)
   (or (@*class-cache* class-id)
-      (let [class (.defineClass *class-loader* name (t/-compile class-ast) nil)]
+      (let [class (.defineClass ^clojure.lang.DynamicClassLoader *class-loader* class-name (t/-compile class-ast) nil)]
         (swap! *class-cache* assoc class-id class)
         class)))
 
