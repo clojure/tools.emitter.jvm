@@ -11,11 +11,26 @@
   (:require [clojure.tools.analyzer.jvm :as a]
             [clojure.tools.analyzer :refer [macroexpand-1 macroexpand]]
             [clojure.tools.emitter.jvm.emit :as e]
+            [clojure.tools.emitter.jvm.transform :as t]
             [clojure.java.io :as io]
             [clojure.string :as s]
             [clojure.tools.reader :as r]
             [clojure.tools.reader.reader-types :as readers])
   (:import clojure.lang.IFn))
+
+(def ^:dynamic *class-cache*)
+(def ^:dynamic *class-loader*)
+
+(defn- compile-and-load
+  [{:keys [name class-id] :as class-ast}]
+  {:pre [(bound? *class-cache*)
+         (instance? clojure.lang.Atom *class-cache*)
+         (bound? *class-loader*)
+         (instance? java.lang.ClassLoader *class-loader*)]}
+  (or (@*class-cache* class-id)
+      (let [class (.defineClass *class-loader* name (t/-compile class-ast) nil)]
+        (swap! *class-cache* assoc class-id class)
+        class)))
 
 (defn eval
   "(eval form)
@@ -36,7 +51,12 @@
     An options map which will be merged with the default options
     provided to emit. Keys in this map take precidence over the default
     values provided to emit. The keys which are significant in this map
-    are documented in the t.e.jvm.emit/emit docstring."
+    are documented in the t.e.jvm.emit/emit docstring.
+
+  Warning
+  -----------
+    Eval requires that the *class-loader* and *class-cache* atoms be
+    bound and will fail if they are not set."
 
   ([form]
      (eval form {}))
@@ -55,12 +75,14 @@
            (doseq [expr statements]
              (eval expr options))
            (eval ret options))
-         (let [r (-> (a/analyze `(^:once fn* [] ~mform) (a/empty-env))
-                     (e/emit (merge
-                              {:debug? debug?
-                               :class-loader (clojure.lang.RT/makeClassLoader)}
-                              emit-opts)))
-               {:keys [class]} (meta r)]
+         (let [r       (-> (a/analyze `(^:once fn* [] ~mform) (a/empty-env))
+                           (e/emit-classes (merge {:debug? debug?} emit-opts)))
+               ;; FIXME:
+               ;;   Using mapv for side-effects is kinda
+               ;;   jank. Arguably something that should be fixed, but
+               ;;   it works.
+               classes (mapv compile-and-load r)
+               class   (last classes)]
            (.invoke ^IFn (.newInstance ^Class class)))))))
 
 (def root-directory @#'clojure.core/root-directory)
@@ -83,24 +105,34 @@
     An options map which will be merged with the default options
     provided to eval. Keys set in this map take precidence over the
     default values supplied to eval. The keys which are significant in
-    this map are documented in the t.e.jvm/eval docstring."
+    this map are documented in the t.e.jvm/eval docstring.
+
+  :class-loader :- (Option ClassLoader)
+    An optional classloader into which compiled functions will be
+    injected. If not provided, a new Clojure classloader will be
+    used. If a class loader is provided here, one need not be provided
+    in eval-opts."
 
   ([res]
      (load res {}))
 
-  ([res {:keys [debug? eval-opts]
-         :or   {debug?    false
-                eval-opts {}}
+  ([res {:keys [debug? eval-opts class-loader]
+         :or   {debug?       false
+                eval-opts    {}
+                class-loader (clojure.lang.RT/makeClassLoader)}
          :as options}]
-     (let [p    (str (apply str (replace {\. \/ \- \_} res)) ".clj")
-           eof  (Object.)
-           p (if (.startsWith p "/")
-               (subs p 1)
-               (subs (str (root-directory (ns-name *ns*)) "/" p) 1))
-           file (-> p io/resource io/reader slurp)
+     {:pre [(instance? java.lang.ClassLoader class-loader)]}
+     (let [p      (str (apply str (replace {\. \/ \- \_} res)) ".clj")
+           eof    (Object.)
+           p      (if (.startsWith p "/")
+                    (subs p 1)
+                    (subs (str (root-directory (ns-name *ns*)) "/" p) 1))
+           file   (-> p io/resource io/reader slurp)
            reader (readers/indexing-push-back-reader file 1 p)]
-       (binding [*ns* *ns*
-                 *file* p]
+       (binding [*ns*           *ns*
+                 *file*         p
+                 *class-cache*  (atom {})
+                 *class-loader* class-loader]
          (loop []
            (let [form (r/read reader false eof)]
              (when (not= eof form)
