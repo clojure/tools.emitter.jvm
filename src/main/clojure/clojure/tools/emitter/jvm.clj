@@ -11,11 +11,16 @@
   (:require [clojure.tools.analyzer.jvm :as a]
             [clojure.tools.analyzer :refer [macroexpand-1 macroexpand]]
             [clojure.tools.emitter.jvm.emit :as e]
+            [clojure.tools.emitter.jvm.transform :as t]
             [clojure.java.io :as io]
             [clojure.string :as s]
             [clojure.tools.reader :as r]
             [clojure.tools.reader.reader-types :as readers])
-  (:import clojure.lang.IFn))
+  (:import (clojure.lang IFn DynamicClassLoader Atom)))
+
+(defn compile-and-load
+  [{:keys [class-name] :as class-ast} class-loader]
+  (.defineClass ^DynamicClassLoader class-loader class-name (t/-compile class-ast) nil))
 
 (defn eval
   "(eval form)
@@ -40,11 +45,12 @@
 
   ([form]
      (eval form {}))
-
-  ([form {:keys [debug? emit-opts]
+  ([form {:keys [debug? emit-opts class-loader]
           :or {debug?    false
-               emit-opts {}}
+               emit-opts {}
+               class-loader (clojure.lang.RT/makeClassLoader)}
           :as options}]
+     {:pre [(instance? DynamicClassLoader class-loader)]}
      (let [mform (binding [macroexpand-1 a/macroexpand-1]
                    (macroexpand form (a/empty-env)))]
        (if (and (seq? mform) (= 'do (first mform)))
@@ -55,13 +61,10 @@
            (doseq [expr statements]
              (eval expr options))
            (eval ret options))
-         (let [r (-> (a/analyze `(^:once fn* [] ~mform) (a/empty-env))
-                     (e/emit (merge
-                              {:debug? debug?
-                               :class-loader (clojure.lang.RT/makeClassLoader)}
-                              emit-opts)))
-               {:keys [class]} (meta r)]
-           (.invoke ^IFn (.newInstance ^Class class)))))))
+         (let [cs (-> (a/analyze `(^:once fn* [] ~mform) (a/empty-env))
+                    (e/emit-classes (merge {:debug? debug?} emit-opts)))
+               classes (mapv #(compile-and-load % class-loader) cs)]
+           ((.newInstance ^Class (last classes))))))))
 
 (def root-directory @#'clojure.core/root-directory)
 
@@ -83,27 +86,35 @@
     An options map which will be merged with the default options
     provided to eval. Keys set in this map take precidence over the
     default values supplied to eval. The keys which are significant in
-    this map are documented in the t.e.jvm/eval docstring."
+    this map are documented in the t.e.jvm/eval docstring.
+
+  :class-loader :- (Option ClassLoader)
+    An optional classloader into which compiled functions will be
+    injected. If not provided, a new Clojure classloader will be
+    used. If a class loader is provided here, one need not be provided
+    in eval-opts."
 
   ([res]
      (load res {}))
-
-  ([res {:keys [debug? eval-opts]
-         :or   {debug?    false
-                eval-opts {}}
+  ([res {:keys [debug? eval-opts class-loader]
+         :or   {debug?       false
+                eval-opts    {}
+                class-loader (clojure.lang.RT/makeClassLoader)}
          :as options}]
-     (let [p    (str (apply str (replace {\. \/ \- \_} res)) ".clj")
-           eof  (Object.)
-           p (if (.startsWith p "/")
-               (subs p 1)
-               (subs (str (root-directory (ns-name *ns*)) "/" p) 1))
-           file (-> p io/resource io/reader slurp)
+     (let [p      (str (apply str (replace {\. \/ \- \_} res)) ".clj")
+           eof    (Object.)
+           p      (if (.startsWith p "/")
+                    (subs p 1)
+                    (subs (str (root-directory (ns-name *ns*)) "/" p) 1))
+           file   (-> p io/resource io/reader slurp)
            reader (readers/indexing-push-back-reader file 1 p)]
-       (binding [*ns* *ns*
+       (binding [*ns*   *ns*
                  *file* p]
          (loop []
            (let [form (r/read reader false eof)]
              (when (not= eof form)
-               (eval form eval-opts)
+               (eval form (merge eval-opts
+                                 (when class-loader
+                                   {:class-loader class-loader})))
                (recur))))
          nil))))
