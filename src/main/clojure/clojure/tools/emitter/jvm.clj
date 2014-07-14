@@ -19,17 +19,24 @@
   (:import (clojure.lang IFn DynamicClassLoader Atom)))
 
 (defn compile-and-load
+  "(λ Class-AST → ClassLoader) → Class
+
+  Compiles the argument class, installing it in the provided
+  ClassLoader, returning the resulting Class object."
+
   [{:keys [class-name] :as class-ast} class-loader]
+  {:pre [(instance? java.lang.ClassLoader class-loader)]}
   (.defineClass ^DynamicClassLoader class-loader class-name (t/-compile class-ast) nil))
 
-(defn eval
-  "(eval form)
-   (eval form eval-options-map)
+(defn eval-to-classes
+  "(λ Form) → (Seq Class-AST)
+  (λ Form → Options) → (Seq Class-AST)
 
-  Form is a read Clojure s expression represented as a list.
-  Eval-options-map is a map, defaulting to the empty map, the
-  following values of which are significant. Returns the result of
-  evaling the input expression.
+  Form is a read Clojure s expression represented as a list. Options
+  is a map, defaulting to the empty map, in which the following values
+  are significant. Analyzes and compiles the input Form, returning a
+  sequence of Class ASTs. The class ASTs returned have not been
+  assembled and loaded.
 
   Options
   -----------
@@ -41,10 +48,15 @@
     An options map which will be merged with the default options
     provided to emit. Keys in this map take precidence over the default
     values provided to emit. The keys which are significant in this map
-    are documented in the t.e.jvm.emit/emit docstring."
+    are documented in the t.e.jvm.emit/emit docstring.
+
+  :class-loader :- (Option ClassLoader)
+    A class loader into which generated classes will be defined. If
+    this option is not set, a new DynamicClassLoader will be constructed
+    and used."
 
   ([form]
-     (eval form {}))
+     (eval-to-classes form {}))
   ([form {:keys [debug? emit-opts class-loader]
           :or {debug?    false
                emit-opts {}
@@ -61,20 +73,56 @@
            (doseq [expr statements]
              (eval expr options))
            (eval ret options))
-         (let [cs (-> (a/analyze `(^:once fn* [] ~mform) (a/empty-env))
-                    (e/emit-classes (merge {:debug? debug?} emit-opts)))
-               classes (mapv #(compile-and-load % class-loader) cs)]
-           ((.newInstance ^Class (last classes))))))))
+         (-> (a/analyze `(^:once fn* [] ~mform) (a/empty-env))
+             (e/emit-classes (merge {:debug? debug?} emit-opts)))))))
+
+(defn eval
+  "(λ Form) → Any
+  (λ Form → Options) → Any
+
+  Form is a read Clojure s expression represented as a list.
+  Eval-options-map is a map, defaulting to the empty map, the
+  following values of which are significant. Returns the result of
+  evaling the input expression.
+
+  Options
+  -----------
+  :debug? :- (Option Bool)
+    Enables or disables printing in eval. Used as the default value for
+    printing in the emitter.
+
+  :emit-opts :- (Option emit-options-map)
+    An options map which will be merged with the default options
+    provided to emit. Keys in this map take precidence over the default
+    values provided to emit. The keys which are significant in this map
+    are documented in the t.e.jvm.emit/emit docstring.
+
+  :class-loader :- (Option ClassLoader)
+    A class loader into which generated classes will be defined. If
+    this option is not set, a new DynamicClassLoader will be constructed
+    and used."
+
+  ([form]
+     (eval form {}))
+  ([form {:keys [debug? emit-opts class-loader]
+          :or {debug?    false
+               emit-opts {}
+               class-loader (clojure.lang.RT/makeClassLoader)}
+          :as options}]
+     {:pre [(instance? DynamicClassLoader class-loader)]}
+     (let [classes (->> (eval-to-classes form options)
+                        (mapv compile-and-load))]
+       ((.newInstance ^Class (last classes))))))
 
 (def root-directory @#'clojure.core/root-directory)
 
 (defn load
-  "(load resource)
-   (load resource load-options-map)
+  "(λ Resource) → Nil
+  (λ Resource → Options) → Nil
 
   Resource is a string identifier for a Clojure resource on the
-  classpath. Load-options is a a map, defalting to the empty map, in
-  which the following keys are meaningful. Returns nil.
+  classpath. Options is a a map, defalting to the empty map, in which
+  the following keys are meaningful. Returns nil.
 
   Options
   -----------
