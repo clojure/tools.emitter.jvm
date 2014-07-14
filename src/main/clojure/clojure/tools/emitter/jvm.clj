@@ -65,14 +65,15 @@
      {:pre [(instance? DynamicClassLoader class-loader)]}
      (let [mform (binding [macroexpand-1 a/macroexpand-1]
                    (macroexpand form (a/empty-env)))]
-       (if (and (seq? mform) (= 'do (first mform)))
+       (if (and (seq? mform)
+                (= 'do (first mform)))
          (let [[statements ret] (loop [statements [] [e & exprs] (rest mform)]
                                   (if (seq exprs)
                                     (recur (conj statements e) exprs)
                                     [statements e]))]
-           (doseq [expr statements]
-             (eval expr options))
-           (eval ret options))
+           (concat
+            (mapcat #(eval-to-classes % options) statements)
+            (eval-to-classes ret options)))
          (-> (a/analyze `(^:once fn* [] ~mform) (a/empty-env))
              (e/emit-classes (merge {:debug? debug?} emit-opts)))))))
 
@@ -110,9 +111,23 @@
                class-loader (clojure.lang.RT/makeClassLoader)}
           :as options}]
      {:pre [(instance? DynamicClassLoader class-loader)]}
-     (let [classes (->> (eval-to-classes form options)
-                        (mapv compile-and-load))]
-       ((.newInstance ^Class (last classes))))))
+     (let [mform (binding [macroexpand-1 a/macroexpand-1]
+                   (macroexpand form (a/empty-env)))]
+       (if ;; handle forms which expand into the do macro
+           (and (seq? mform)
+                (= 'do (first mform)))
+         (let [[statements ret] (loop [statements [] [e & exprs] (rest mform)]
+                                  (if (seq exprs)
+                                    (recur (conj statements e) exprs)
+                                    [statements e]))]
+           (doseq [expr statements]
+             (eval expr options))
+           (eval ret options))
+
+         ;; handle the default case of evaluating the form
+         (let [classes (->> (eval-to-classes mform options)
+                            (mapv #(compile-and-load % class-loader)))]
+           ((.newInstance ^Class (last classes))))))))
 
 (def root-directory @#'clojure.core/root-directory)
 
