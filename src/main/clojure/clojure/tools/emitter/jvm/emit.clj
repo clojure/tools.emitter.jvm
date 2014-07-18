@@ -1372,10 +1372,10 @@
                                                  variadic-method meta-methods
                                                  (mapcat #(-emit % frame) methods))}]
 
-    (or (get-in @*classes* [:ids class-id])
-        (swap! *classes* update-in [:classes] conj jvm-ast)
-        (when class-id
-          (swap! *classes* update-in [:ids] conj class-id)))
+    (when-not (get-in @*classes* [:ids class-id])
+      (swap! *classes* update-in [:classes] conj jvm-ast)
+      (when class-id
+        (swap! *classes* update-in [:ids] conj class-id)))
 
     (if deftype?
       [[:insn :ACONST_NULL]]
