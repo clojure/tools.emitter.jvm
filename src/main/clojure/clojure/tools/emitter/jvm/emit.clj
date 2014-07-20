@@ -328,7 +328,7 @@
          `[[:aload ~ret-local]])
      [:mark ~(label)]
 
-     ~@(for [{:keys [^Class class] :as c} catches]
+     ~@(for [c catches :let [^Class class (-> c :class :val)]]
          [:try-catch-block start-label end-label (:start-label c) class])
 
      ~@(when finally
@@ -421,17 +421,18 @@
       [:mark ~end-label]]))
 
 (defmethod -emit :new
-  [{:keys [env ^Class class args validated?]} frame]
-  (if validated?
-    `[[:new-instance ~class]
-      [:dup]
-      ~@(mapcat #(emit % frame) args)
-      [:invoke-constructor [~(keyword (.getName class) "<init>")
-                            ~@(mapv :tag args)] :void]]
-    `[[:push ~(.getName class)]
-      [:invoke-static [:java.lang.Class/forName :java.lang.String] :java.lang.Class]
-      ~@(emit-as-array args frame)
-      [:invoke-static [:clojure.lang.Reflector/invokeConstructor :java.lang.Class :objects] :java.lang.Object]]))
+  [{:keys [env class args validated?]} frame]
+  (let [cname (.getName ^Class (:val class))]
+    (if validated?
+      `[[:new-instance ~class]
+        [:dup]
+        ~@(mapcat #(emit % frame) args)
+        [:invoke-constructor [~(keyword cname "<init>")
+                              ~@(mapv :tag args)] :void]]
+      `[[:push ~cname]
+        [:invoke-static [:java.lang.Class/forName :java.lang.String] :java.lang.Class]
+        ~@(emit-as-array args frame)
+        [:invoke-static [:clojure.lang.Reflector/invokeConstructor :java.lang.Class :objects] :java.lang.Object]])))
 
 (defn emit-intrinsic [{:keys [args method ^Class class false-label]}]
   (let [m (str (.getMethod class (name method) (into-array Class (mapv :tag args))))]
