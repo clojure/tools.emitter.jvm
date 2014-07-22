@@ -424,7 +424,7 @@
   [{:keys [env class args validated?]} frame]
   (let [cname (.getName ^Class (:val class))]
     (if validated?
-      `[[:new-instance ~class]
+      `[[:new-instance ~cname]
         [:dup]
         ~@(mapcat #(emit % frame) args)
         [:invoke-constructor [~(keyword cname "<init>")
