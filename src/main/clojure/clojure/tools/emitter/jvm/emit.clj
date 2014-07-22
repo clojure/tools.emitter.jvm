@@ -735,33 +735,12 @@
   [ast frame]
   (emit-let ast frame))
 
-(def ^:dynamic *loops*)
-
 (defmethod -emit :loop
-  [{:keys [closed-overs tag loop-id] :as ast} {:keys [class loop-locals] :as frame}]
+  [{:keys [closed-overs tag loop-id] :as ast} {:keys [class params] :as frame}]
   (let [locals (filter #(#{:let :letfn :loop} (:local %)) (vals closed-overs))
-        [loop-label end-label] (repeatedly 2 label)
-        bc `[[:start-method]
-             [:label ~loop-label]
-             [:load-this]
-             ~@(mapcat (fn [i {:keys [name o-tag] :as l}]
-                         `[[:load-arg ~i]
-                           ~[:local-variable name o-tag loop-label end-label name]
-                           ~[:var-insn (keyword (.getName ^Class o-tag) "ISTORE") name]])
-                       (iterate inc (count loop-locals)) locals)
-             ~@(emit-let ast frame)
-             [:check-cast ~tag]
-             [:label ~end-label]
-             [:return-value]
-             [:end-method]]
         method-sig (into [(keyword class (str loop-id))]
-                         (into (mapv :o-tag loop-locals)
+                         (into (mapv :o-tag params)
                                (mapv :o-tag locals)))]
-
-    (swap! *loops* conj {:op :method
-                         :attr #{:private}
-                         :method [method-sig tag]
-                         :code bc})
     `[[:load-this]
       [:load-args]
       ~@(mapcat (fn [l] (-emit l frame)) locals)
@@ -824,8 +803,35 @@
                   exprs loop-locals))
     [:go-to ~loop-label]])
 
+(defn emit-loops [loops {:keys [class params] :as frame}]
+  (mapv (fn [{:keys [closed-overs tag loop-id] :as ast}]
+          (let [locals (filter #(#{:let :letfn :loop} (:local %)) (vals closed-overs))
+                [loop-label end-label] (repeatedly 2 label)
+                bc `[[:start-method]
+                     [:local-variable :this :clojure.lang.AFunction nil ~loop-label ~end-label :this]
+                     [:label ~loop-label]
+                     [:load-this]
+                     ~@(mapcat (fn [i {:keys [name o-tag] :as l}]
+                                 `[[:load-arg ~i]
+                                   ~[:local-variable name o-tag loop-label end-label name]
+                                   ~[:var-insn (keyword (.getName ^Class o-tag) "ISTORE") name]])
+                               (iterate inc (count params)) locals)
+                     ~@(emit-let ast frame)
+                     ~@(emit-cast (prim-or-obj tag) tag)
+                     [:label ~end-label]
+                     [:return-value]
+                     [:end-method]]
+                method-sig (into [(keyword loop-id)]
+                                 (into (mapv :o-tag params)
+                                       (mapv :o-tag locals)))]
+
+            {:op :method
+             :attr #{:private}
+             :method [method-sig tag]
+             :code bc})) loops))
+
 (defmethod -emit :fn-method
-  [{:keys [params tag fixed-arity variadic? body env]}
+  [{:keys [params tag fixed-arity variadic? body env loops]}
    {:keys [class] :as frame}]
   (let [arg-tags               (mapv (comp prim-or-obj :tag) params)
         return-type            (prim-or-obj tag)
@@ -857,7 +863,8 @@
           ~@(emit-line-number env loop-label)
           ~@(emit body (assoc frame
                          :loop-label  loop-label
-                         :loop-locals params))
+                         :loop-locals params
+                         :params      params))
           [:mark ~end-label]
           [:return-value]
           [:end-method]]]
@@ -883,7 +890,9 @@
                          ~[:invoke-virtual (into [(keyword class "invokePrim")] arg-tags) return-type]
                          ~@(emit-cast return-type Object)
                          [:return-value]
-                         [:end-method]]}])]))
+                         [:end-method]]}])
+      ~@(when loops
+          (emit-loops loops (assoc frame :params params)))]))
 
 ;; addAnnotations
 (defmethod -emit :method
@@ -1397,11 +1406,9 @@
                             :interfaces  interfaces
                             :fields      (concat consts keyword-callsites
                                                  meta-field closed-overs protocol-callsites)
-                            :methods     (binding [*loops* (atom [])]
-                                           (concat class-ctors defrecord-ctor deftype-methods
-                                                   variadic-method meta-methods
-                                                   (seq (mapcat #(-emit % frame) methods))
-                                                   @*loops*))}]
+                            :methods     (concat class-ctors defrecord-ctor deftype-methods
+                                                 variadic-method meta-methods
+                                                 (mapcat #(-emit % frame) methods))}]
 
     (when-not (get-in @*classes* [:ids class-id])
       (swap! *classes* update-in [:classes] conj jvm-ast)

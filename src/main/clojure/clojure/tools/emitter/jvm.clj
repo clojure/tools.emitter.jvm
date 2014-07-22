@@ -10,6 +10,7 @@
   (:refer-clojure :exclude [eval macroexpand-1 macroexpand load])
   (:require [clojure.tools.analyzer.jvm :as a]
             [clojure.tools.analyzer :refer [macroexpand-1 macroexpand]]
+            [clojure.tools.analyzer.ast :refer [update-children]]
             [clojure.tools.emitter.jvm.emit :as e]
             [clojure.tools.emitter.jvm.transform :as t]
             [clojure.java.io :as io]
@@ -21,6 +22,21 @@
 (defn compile-and-load
   [{:keys [class-name] :as class-ast} class-loader]
   (.defineClass ^DynamicClassLoader class-loader class-name (t/-compile class-ast) nil))
+
+(def ^:dynamic *loops*)
+(defn collect-loops [ast]
+  (case (:op ast)
+   :fn-method
+   (binding [*loops* (atom [])]
+     (let [ast (update-children ast collect-loops)]
+       (assoc ast :loops @*loops*)))
+
+   :loop
+   (do
+     (swap! *loops* conj ast)
+     (update-children ast collect-loops))
+
+   (update-children ast collect-loops)))
 
 (defn eval
   "(eval form)
@@ -62,6 +78,7 @@
              (eval expr options))
            (eval ret options))
          (let [cs (-> (a/analyze `(^:once fn* [] ~mform) (a/empty-env))
+                    collect-loops
                     (e/emit-classes (merge {:debug? debug?} emit-opts)))
                classes (mapv #(compile-and-load % class-loader) cs)]
            ((.newInstance ^Class (last classes))))))))
