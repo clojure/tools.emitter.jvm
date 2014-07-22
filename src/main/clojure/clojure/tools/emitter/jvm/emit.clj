@@ -735,9 +735,37 @@
   [ast frame]
   (emit-let ast frame))
 
+(def ^:dynamic *loops*)
+
 (defmethod -emit :loop
-  [ast frame]
-  (emit-let ast frame))
+  [{:keys [closed-overs tag loop-id] :as ast} {:keys [class loop-locals] :as frame}]
+  (let [locals (filter #(#{:let :letfn :loop} (:local %)) (vals closed-overs))
+        [loop-label end-label] (repeatedly 2 label)
+        bc `[[:start-method]
+             [:label ~loop-label]
+             [:load-this]
+             ~@(mapcat (fn [i {:keys [name o-tag] :as l}]
+                         `[[:load-arg ~i]
+                           ~[:local-variable name o-tag loop-label end-label name]
+                           ~[:var-insn (keyword (.getName ^Class o-tag) "ISTORE") name]])
+                       (iterate inc (count loop-locals)) locals)
+             ~@(emit-let ast frame)
+             [:check-cast ~tag]
+             [:label ~end-label]
+             [:return-value]
+             [:end-method]]
+        method-sig (into [(keyword class (str loop-id))]
+                         (into (mapv :o-tag loop-locals)
+                               (mapv :o-tag locals)))]
+
+    (swap! *loops* conj {:op :method
+                         :attr #{:private}
+                         :method [method-sig tag]
+                         :code bc})
+    `[[:load-this]
+      [:load-args]
+      ~@(mapcat (fn [l] (-emit l frame)) locals)
+      ~[:invoke-virtual method-sig tag]]))
 
 (defn emit-letfn-bindings [bindings class-names frame]
   (let [binds (set (mapv :name bindings))]
@@ -1369,9 +1397,11 @@
                             :interfaces  interfaces
                             :fields      (concat consts keyword-callsites
                                                  meta-field closed-overs protocol-callsites)
-                            :methods     (concat class-ctors defrecord-ctor deftype-methods
-                                                 variadic-method meta-methods
-                                                 (mapcat #(-emit % frame) methods))}]
+                            :methods     (binding [*loops* (atom [])]
+                                           (concat class-ctors defrecord-ctor deftype-methods
+                                                   variadic-method meta-methods
+                                                   (seq (mapcat #(-emit % frame) methods))
+                                                   @*loops*))}]
 
     (when-not (get-in @*classes* [:ids class-id])
       (swap! *classes* update-in [:classes] conj jvm-ast)
