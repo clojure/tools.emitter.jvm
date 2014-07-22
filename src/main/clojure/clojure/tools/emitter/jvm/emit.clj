@@ -736,8 +736,14 @@
   (emit-let ast frame))
 
 (defmethod -emit :loop
-  [ast frame]
-  (emit-let ast frame))
+  [{:keys [closed-overs tag internal-method-name] :as ast} {:keys [class params] :as frame}]
+  (let [locals (remove #(#{:arg :field} (:local %)) (vals closed-overs))
+        method-sig (into [(keyword class (str internal-method-name))]
+                         (into (mapv :tag params)
+                               (mapv :o-tag locals)))]
+    `[[:load-this]
+      ~@(mapcat (fn [l] (-emit (assoc l :op :local) frame)) (concat params locals))
+      ~[:invoke-virtual method-sig tag]]))
 
 (defn emit-letfn-bindings [bindings class-names frame]
   (let [binds (set (mapv :name bindings))]
@@ -796,8 +802,40 @@
                   exprs loop-locals))
     [:go-to ~loop-label]])
 
+(defn emit-internal-methods [methods {:keys [class params] :as frame}]
+  (mapv (fn [{:keys [closed-overs tag internal-method-name] :as ast}]
+          (let [locals (remove #(#{:arg :field} (:local %)) (vals closed-overs))
+                [loop-label end-label] (repeatedly label)
+                bc `[[:start-method]
+                     [:local-variable :this :clojure.lang.AFunction nil ~loop-label ~end-label :this]
+                     [:label ~loop-label]
+                     ~@(mapv (fn [{:keys [name tag]}]
+                               [:local-variable name tag nil loop-label end-label name])
+                             params)
+                     ~@(mapcat (fn [i {:keys [name o-tag] :as l}]
+                                 `[[:load-arg ~i]
+                                   ~[:local-variable name o-tag nil loop-label end-label name]
+                                   ~[:var-insn (keyword (.getName ^Class o-tag) "ISTORE") name]])
+                               (iterate inc (count params)) locals)
+                     ~@(case (:op ast)
+                         :loop
+                         (emit-let ast frame))
+                     ~@(emit-cast (prim-or-obj tag) tag)
+                     [:label ~end-label]
+                     [:return-value]
+                     [:end-method]]
+                method-sig (into [(keyword internal-method-name)]
+                                 (into (mapv :tag params)
+                                       (mapv :o-tag locals)))]
+
+            {:op :method
+             :attr #{:private}
+             :method [method-sig tag]
+             :code bc}))
+        methods))
+
 (defmethod -emit :fn-method
-  [{:keys [params tag fixed-arity variadic? body env]}
+  [{:keys [params tag fixed-arity variadic? body env internal-methods]}
    {:keys [class] :as frame}]
   (let [arg-tags               (mapv (comp prim-or-obj :tag) params)
         return-type            (prim-or-obj tag)
@@ -829,7 +867,8 @@
           ~@(emit-line-number env loop-label)
           ~@(emit body (assoc frame
                          :loop-label  loop-label
-                         :loop-locals params))
+                         :loop-locals params
+                         :params      params))
           [:mark ~end-label]
           [:return-value]
           [:end-method]]]
@@ -855,7 +894,9 @@
                          ~[:invoke-virtual (into [(keyword class "invokePrim")] arg-tags) return-type]
                          ~@(emit-cast return-type Object)
                          [:return-value]
-                         [:end-method]]}])]))
+                         [:end-method]]}])
+      ~@(when internal-methods
+          (emit-internal-methods internal-methods (assoc frame :params params)))]))
 
 ;; addAnnotations
 (defmethod -emit :method

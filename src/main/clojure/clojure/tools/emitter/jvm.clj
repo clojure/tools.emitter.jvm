@@ -12,6 +12,7 @@
             [clojure.tools.analyzer :refer [macroexpand-1 macroexpand]]
             [clojure.tools.emitter.jvm.emit :as e]
             [clojure.tools.emitter.jvm.transform :as t]
+            [clojure.tools.emitter.passes.jvm.collect-internal-methods :refer :all]
             [clojure.java.io :as io]
             [clojure.string :as s]
             [clojure.tools.reader :as r]
@@ -62,6 +63,7 @@
              (eval expr options))
            (eval ret options))
          (let [cs (-> (a/analyze `(^:once fn* [] ~mform) (a/empty-env))
+                    collect-internal-methods
                     (e/emit-classes (merge {:debug? debug?} emit-opts)))
                classes (mapv #(compile-and-load % class-loader) cs)]
            ((.newInstance ^Class (last classes))))))))
