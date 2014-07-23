@@ -24,19 +24,21 @@
   (.defineClass ^DynamicClassLoader class-loader class-name (t/-compile class-ast) nil))
 
 (def ^:dynamic *internal-methods*)
-(defn collect-loops [ast]
+(defn collect-internal-methods [ast]
   (case (:op ast)
    :fn-method
    (binding [*internal-methods* (atom [])]
-     (let [ast (update-children ast collect-loops)]
-       (assoc ast :internal-methods @*internal-methods*)))
+     (let [ast (update-children ast collect-internal-methods)]
+       (merge ast
+              (when-let [m (seq @*internal-methods*)]
+                {:internal-methods m}))))
 
    :loop
-   (do
+   (let [ast (update-children ast collect-internal-methods)]
      (swap! *internal-methods* conj ast)
-     (update-children ast collect-loops))
+     ast)
 
-   (update-children ast collect-loops)))
+   (update-children ast collect-internal-methods)))
 
 (defn eval
   "(eval form)
@@ -78,7 +80,7 @@
              (eval expr options))
            (eval ret options))
          (let [cs (-> (a/analyze `(^:once fn* [] ~mform) (a/empty-env))
-                    collect-loops
+                    collect-internal-methods
                     (e/emit-classes (merge {:debug? debug?} emit-opts)))
                classes (mapv #(compile-and-load % class-loader) cs)]
            ((.newInstance ^Class (last classes))))))))
