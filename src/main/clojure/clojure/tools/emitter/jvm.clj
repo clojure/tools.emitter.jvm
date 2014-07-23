@@ -23,17 +23,17 @@
   [{:keys [class-name] :as class-ast} class-loader]
   (.defineClass ^DynamicClassLoader class-loader class-name (t/-compile class-ast) nil))
 
-(def ^:dynamic *loops*)
+(def ^:dynamic *internal-methods*)
 (defn collect-loops [ast]
   (case (:op ast)
    :fn-method
-   (binding [*loops* (atom [])]
+   (binding [*internal-methods* (atom [])]
      (let [ast (update-children ast collect-loops)]
-       (assoc ast :loops @*loops*)))
+       (assoc ast :internal-methods @*internal-methods*)))
 
    :loop
    (do
-     (swap! *loops* conj ast)
+     (swap! *internal-methods* conj ast)
      (update-children ast collect-loops))
 
    (update-children ast collect-loops)))
