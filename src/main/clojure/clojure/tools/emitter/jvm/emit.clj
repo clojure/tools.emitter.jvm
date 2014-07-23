@@ -285,7 +285,7 @@
 (defn local []
   (keyword (gensym "local__")))
 
-(defmethod -emit :try
+(defn emit-try
   [{:keys [body catches finally env]} frame]
   (let [[start-label end-label ret-label finally-label] (repeatedly label)
         catches (mapv #(assoc %
@@ -736,9 +736,19 @@
   (emit-let ast frame))
 
 (defmethod -emit :loop
-  [{:keys [closed-overs tag loop-id] :as ast} {:keys [class params] :as frame}]
+  [{:keys [closed-overs tag internal-method-name] :as ast} {:keys [class params] :as frame}]
   (let [locals (remove #(#{:arg :field} (:local %)) (vals closed-overs))
-        method-sig (into [(keyword class (str loop-id))]
+        method-sig (into [(keyword class (str internal-method-name))]
+                         (into (mapv :tag params)
+                               (mapv :o-tag locals)))]
+    `[[:load-this]
+      ~@(mapcat (fn [l] (-emit (assoc l :op :local) frame)) (concat params locals))
+      ~[:invoke-virtual method-sig tag]]))
+
+(defmethod -emit :try
+  [{:keys [closed-overs tag internal-method-name] :as ast} {:keys [class params] :as frame}]
+  (let [locals (remove #(#{:arg :field} (:local %)) (vals closed-overs))
+        method-sig (into [(keyword class (str internal-method-name))]
                          (into (mapv :tag params)
                                (mapv :o-tag locals)))]
     `[[:load-this]
@@ -803,7 +813,7 @@
     [:go-to ~loop-label]])
 
 (defn emit-internal-methods [methods {:keys [class params] :as frame}]
-  (mapv (fn [{:keys [closed-overs tag loop-id] :as ast}]
+  (mapv (fn [{:keys [closed-overs tag internal-method-name] :as ast}]
           (let [locals (remove #(#{:arg :field} (:local %)) (vals closed-overs))
                 [loop-label end-label] (repeatedly label)
                 bc `[[:start-method]
@@ -817,12 +827,16 @@
                                    ~[:local-variable name o-tag nil loop-label end-label name]
                                    ~[:var-insn (keyword (.getName ^Class o-tag) "ISTORE") name]])
                                (iterate inc (count params)) locals)
-                     ~@(emit-let ast frame)
+                     ~@(case (:op ast)
+                         :loop
+                         (emit-let ast frame)
+                         :try
+                         (emit-try ast frame))
                      ~@(emit-cast (prim-or-obj tag) tag)
                      [:label ~end-label]
                      [:return-value]
                      [:end-method]]
-                method-sig (into [(keyword loop-id)]
+                method-sig (into [(keyword internal-method-name)]
                                  (into (mapv :tag params)
                                        (mapv :o-tag locals)))]
 
