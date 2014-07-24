@@ -285,7 +285,7 @@
 (defn local []
   (keyword (gensym "local__")))
 
-(defn emit-try
+(defmethod -emit :try
   [{:keys [body catches finally env]} frame]
   (let [[start-label end-label ret-label finally-label] (repeatedly label)
         catches (mapv #(assoc %
@@ -736,16 +736,6 @@
   (emit-let ast frame))
 
 (defmethod -emit :loop
-  [{:keys [closed-overs tag internal-method-name] :as ast} {:keys [class params] :as frame}]
-  (let [locals (remove #(#{:arg :field} (:local %)) (vals closed-overs))
-        method-sig (into [(keyword class (str internal-method-name))]
-                         (into (mapv :tag params)
-                               (mapv :o-tag locals)))]
-    `[[:load-this]
-      ~@(mapcat (fn [l] (-emit (assoc l :op :local) frame)) (concat params locals))
-      ~[:invoke-virtual method-sig tag]]))
-
-(defmethod -emit :try
   [{:keys [closed-overs tag internal-method-name] :as ast} {:keys [class params] :as frame}]
   (let [locals (remove #(#{:arg :field} (:local %)) (vals closed-overs))
         method-sig (into [(keyword class (str internal-method-name))]

@@ -33,9 +33,9 @@
               (when-let [m (seq @*internal-methods*)]
                 {:internal-methods m}))))
 
-   (:loop :try)
-   (let [ast (update-children (assoc ast :internal-method-name (or (:loop-id ast)
-                                                                   (gensym "try__")))
+   :loop
+   (let [ast (update-children (assoc ast :internal-method-name
+                                     (or (:loop-id ast) (gensym)))
                               collect-internal-methods)]
      (swap! *internal-methods* conj ast)
      ast)
