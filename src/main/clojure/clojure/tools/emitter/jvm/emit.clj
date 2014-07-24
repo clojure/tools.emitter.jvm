@@ -839,7 +839,6 @@
 (defmethod -emit :fn-method
   [{:keys [params tag fixed-arity variadic? body env internal-methods]}
    {:keys [class] :as frame}]
-
   (let [arg-tags               (mapv (comp prim-or-obj :tag) params)
         return-type            (prim-or-obj tag)
         tags                   (conj arg-tags return-type)

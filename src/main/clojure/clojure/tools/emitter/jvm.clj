@@ -12,7 +12,8 @@
             [clojure.tools.analyzer :refer [macroexpand-1 macroexpand]]
             [clojure.tools.analyzer.ast :refer [update-children]]
             [clojure.tools.emitter.jvm.emit :as e]
-            [clojure.tools.emitter.jvm.transform :as t]
+            [clojure.tools.emitter.jvm.emit :as e]
+            [clojure.tools.emitter.passes.collect-internal-methods :refer :all]
             [clojure.java.io :as io]
             [clojure.string :as s]
             [clojure.tools.reader :as r]
@@ -22,25 +23,6 @@
 (defn compile-and-load
   [{:keys [class-name] :as class-ast} class-loader]
   (.defineClass ^DynamicClassLoader class-loader class-name (t/-compile class-ast) nil))
-
-(def ^:dynamic *internal-methods*)
-(defn collect-internal-methods [ast]
-  (case (:op ast)
-   :fn-method
-   (binding [*internal-methods* (atom [])]
-     (let [ast (update-children ast collect-internal-methods)]
-       (merge ast
-              (when-let [m (seq @*internal-methods*)]
-                {:internal-methods m}))))
-
-   :loop
-   (let [ast (update-children (assoc ast :internal-method-name
-                                     (or (:loop-id ast) (gensym)))
-                              collect-internal-methods)]
-     (swap! *internal-methods* conj ast)
-     ast)
-
-   (update-children ast collect-internal-methods)))
 
 (defn eval
   "(eval form)
