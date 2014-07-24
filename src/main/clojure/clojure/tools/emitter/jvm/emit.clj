@@ -819,9 +819,7 @@
                                (iterate inc (count params)) locals)
                      ~@(case (:op ast)
                          :loop
-                         (emit-let ast frame)
-                         :try
-                         (emit-try ast frame))
+                         (emit-let ast frame))
                      ~@(emit-cast (prim-or-obj tag) tag)
                      [:label ~end-label]
                      [:return-value]
