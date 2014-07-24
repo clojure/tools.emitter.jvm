@@ -286,19 +286,20 @@
   (keyword (gensym "local__")))
 
 (defmethod -emit :try
-  [{:keys [body catches finally env]} frame]
+  [{:keys [body catches finally env tag]} frame]
   (let [[start-label end-label ret-label finally-label] (repeatedly label)
         catches (mapv #(assoc %
                          :start-label (label)
                          :end-label (label)) catches)
         context (:context env)
-        [ret-local finally-local] (repeatedly local)]
+        [ret-local finally-local] (repeatedly local)
+        ret-local-tag (.getName ^Class tag)]
 
     `^:container
     [[:mark ~start-label]
      ~@(emit body frame)
      ~@(when (not= :ctx/statement context)
-         [[:astore ret-local]])
+         [[:var-insn (keyword ret-local-tag "ISTORE") ret-local]])
      [:mark ~end-label]
      ~@(when finally
          (emit finally frame))
@@ -310,7 +311,7 @@
             [:astore ~(:name local)]
             ~@(emit body frame)
             ~@(when (not= :ctx/statement context)
-                [[:astore ret-local]])
+                [[:var-insn (keyword ret-local-tag "ISTORE") ret-local]])
             [:mark ~end-label]
             ~@(when finally
                 (emit finally frame))
@@ -325,7 +326,7 @@
 
      [:mark ~ret-label]
      ~@(when (not= :ctx/statement context)
-         `[[:aload ~ret-local]])
+         [[:var-insn (keyword ret-local-tag "ILOAD") ret-local]])
      [:mark ~(label)]
 
      ~@(for [c catches :let [^Class class (-> c :class :val)]]
@@ -336,9 +337,8 @@
            ~@(for [{:keys [start-label end-label] :as c} catches]
                [:try-catch-block start-label end-label finally-label nil])])
 
-     ~@(for [{:keys [local start-label end-label] :as c} catches]
-         [:local-variable (:name local) ; or :form?
-          :objects nil start-label end-label (:name local)])])) ;; generate idx based on name
+     ~@(for [{:keys [local start-label end-label body] :as c} catches]
+         [:local-variable (:name local) Exception nil start-label end-label (:name local)])]))
 
 (defn emit-line-number
   [{:keys [line]} & [l]]
