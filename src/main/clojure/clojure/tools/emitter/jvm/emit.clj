@@ -285,7 +285,7 @@
 (defn local []
   (keyword (gensym "local__")))
 
-(defmethod -emit :try
+(defn emit-try
   [{:keys [body catches finally env tag]} frame]
   (let [[start-label end-label ret-label finally-label] (repeatedly label)
         catches (mapv #(assoc %
@@ -745,6 +745,16 @@
       ~@(mapcat (fn [l] (-emit (assoc l :op :local) frame)) (concat params locals))
       ~[:invoke-virtual method-sig tag]]))
 
+(defmethod -emit :try
+  [{:keys [closed-overs tag internal-method-name] :as ast} {:keys [class params] :as frame}]
+  (let [locals (remove #(#{:arg :field} (:local %)) (vals closed-overs))
+        method-sig (into [(keyword class (str internal-method-name))]
+                         (into (mapv :tag params)
+                               (mapv :o-tag locals)))]
+    `[[:load-this]
+      ~@(mapcat (fn [l] (-emit (assoc l :op :local) frame)) (concat params locals))
+      ~[:invoke-virtual method-sig tag]]))
+
 (defn emit-letfn-bindings [bindings class-names frame]
   (let [binds (set (mapv :name bindings))]
     (mapcat (fn [{:keys [init tag name]} class-name]
@@ -819,7 +829,11 @@
                                (iterate inc (count params)) locals)
                      ~@(case (:op ast)
                          :loop
-                         (emit-let ast frame))
+                         (emit-let ast frame)
+                         :try
+                         `[~@(emit-try ast frame)
+                           ~@(if (= :ctx/statement (:context (:env ast)))
+                               [[:insn :ACONST_NULL]])])
                      ~@(emit-cast (prim-or-obj tag) tag)
                      [:label ~end-label]
                      [:return-value]
