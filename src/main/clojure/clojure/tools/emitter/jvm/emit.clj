@@ -293,7 +293,8 @@
                          :end-label (label)) catches)
         context (:context env)
         [ret-local finally-local] (repeatedly local)
-        ret-local-tag (.getName ^Class tag)]
+        ret-local-tag (let [t (.getName ^Class tag)]
+                        (if (= "void" t) "Object" t))]
 
     `^:container
     [[:mark ~start-label]
@@ -312,8 +313,10 @@
           `[[:mark ~start-label]
             [:astore ~(:name local)]
             ~@(emit body frame)
-            ~@(when (not= :ctx/statement context)
-                [[:var-insn (keyword ret-local-tag "ISTORE") ret-local]])
+            ~@(if (= :ctx/statement context)
+                (when (not (#{Void Void/TYPE} (:tag body)))
+                  [(emit-pop (:tag body))])
+               [[:var-insn (keyword ret-local-tag "ISTORE") ret-local]])
             [:mark ~end-label]
             ~@(when finally
                 (emit finally frame))
