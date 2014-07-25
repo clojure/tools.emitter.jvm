@@ -460,10 +460,12 @@
 (defmethod -compile :class
   [{:keys [name attr super fields methods debug? interfaces] :as c}]
   (let [cv (ClassWriter. ClassWriter/COMPUTE_MAXS)
-        interfaces (into interfaces (keep :interface methods))]
+        interfaces (into interfaces (keep :interface methods))
+        cname #(s/replace (type-str %) \. \/)
+        name (cname name)]
 
-    (.visit cv Opcodes/V1_6 (compute-attr attr) name nil (clojure.core/name super)
-            (into-array String (mapv (fn [i] (s/replace (type-str i) \. \/)) interfaces)))
+    (.visit cv Opcodes/V1_6 (compute-attr attr) name nil (cname super)
+            (into-array String (mapv cname interfaces)))
 
     (.visitSource cv name nil)
 

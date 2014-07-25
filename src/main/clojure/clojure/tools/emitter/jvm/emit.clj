@@ -1430,8 +1430,8 @@
                             :attr        #{:public :super :final}
                             :annotations annotations
                             :class-name  class-name
-                            :name        (s/replace class-name \. \/)
-                            :super       (s/replace (name super) \. \/)
+                            :name        class-name
+                            :super       super
                             :interfaces  interfaces
                             :fields      (concat consts keyword-callsites
                                                  meta-field closed-overs protocol-callsites)
