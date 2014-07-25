@@ -298,7 +298,9 @@
     `^:container
     [[:mark ~start-label]
      ~@(emit body frame)
-     ~@(when (not= :ctx/statement context)
+     ~@(if (= :ctx/statement context)
+         [[:insn :ACONST_NULL]
+          [:pop]]
          [[:var-insn (keyword ret-local-tag "ISTORE") ret-local]])
      [:mark ~end-label]
      ~@(when finally
