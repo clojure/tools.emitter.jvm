@@ -751,14 +751,20 @@
       ~[:invoke-virtual method-sig tag]]))
 
 (defmethod -emit :try
-  [{:keys [closed-overs tag internal-method-name] :as ast} {:keys [class params] :as frame}]
+  [{:keys [closed-overs tag internal-method-name env] :as ast} {:keys [class params] :as frame}]
   (let [locals (remove #(#{:arg :field} (:local %)) (vals closed-overs))
         method-sig (into [(keyword class (str internal-method-name))]
                          (into (mapv :tag params)
-                               (mapv :o-tag locals)))]
-    `[[:load-this]
-      ~@(mapcat (fn [l] (-emit (assoc l :op :local) frame)) (concat params locals))
-      ~[:invoke-virtual method-sig tag]]))
+                               (mapv :o-tag locals)))
+        statement? (= :ctx/statement (:context env))
+        tag (if statement? :void tag)]
+    `^:container
+    [[:load-this]
+     ~@(mapcat (fn [l] (-emit (assoc l :op :local) frame)) (concat params locals))
+     ~[:invoke-virtual method-sig tag]
+     ~@(if (and (not statement?)
+                (#{Void Void/TYPE} tag))
+         [[:insn :ACONST_NULL]])]))
 
 (defn emit-letfn-bindings [bindings class-names frame]
   (let [binds (set (mapv :name bindings))]
@@ -818,7 +824,7 @@
     [:go-to ~loop-label]])
 
 (defn emit-internal-methods [methods {:keys [class params] :as frame}]
-  (mapv (fn [{:keys [closed-overs tag internal-method-name] :as ast}]
+  (mapv (fn [{:keys [closed-overs tag internal-method-name body] :as ast}]
           (let [locals (remove #(#{:arg :field} (:local %)) (vals closed-overs))
                 [loop-label end-label] (repeatedly label)
                 bc `[[:start-method]
@@ -836,9 +842,7 @@
                          :loop
                          (emit-let ast frame)
                          :try
-                         `[~@(emit-try ast frame)
-                           ~@(if (= :ctx/statement (:context (:env ast)))
-                               [[:insn :ACONST_NULL]])])
+                         (emit-try ast frame))
                      ~@(emit-cast (prim-or-obj tag) tag)
                      [:label ~end-label]
                      [:return-value]
@@ -849,7 +853,9 @@
 
             {:op :method
              :attr #{:private}
-             :method [method-sig tag]
+             :method [method-sig (if (= :ctx/statement (-> body :env :context))
+                                     :void
+                                     tag)]
              :code bc}))
         methods))
 
