@@ -18,7 +18,7 @@ YourKit is kindly supporting open source projects with its full-featured Java Pr
 
 ## Releases and Dependency Information
 
-Latest stable release: 0.1.0-beta2
+Latest stable release: 0.1.0-beta3
 
 * [All Released Versions](http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22org.clojure%22%20AND%20a%3A%22tools.emitter.jvm%22)
 
@@ -27,7 +27,7 @@ Latest stable release: 0.1.0-beta2
 [Leiningen](https://github.com/technomancy/leiningen) dependency information:
 
 ```clojure
-[org.clojure/tools.emitter.jvm "0.1.0-beta2"]
+[org.clojure/tools.emitter.jvm "0.1.0-beta3"]
 ```
 [Maven](http://maven.apache.org/) dependency information:
 
@@ -35,7 +35,7 @@ Latest stable release: 0.1.0-beta2
 <dependency>
   <groupId>org.clojure</groupId>
   <artifactId>tools.emitter.jvm</artifactId>
-  <version>0.1.0-beta2</version>
+  <version>0.1.0-beta3</version>
 </dependency>
 ```
 
