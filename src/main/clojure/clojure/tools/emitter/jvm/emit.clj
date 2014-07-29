@@ -398,13 +398,13 @@
       ~[:put-field class field o-tag]]))
 
 (defmethod -emit :keyword-invoke
-  [{:keys [env fn args] :as ast} frame]
-  (let [id (:id fn)
+  [{:keys [env target keyword args] :as ast} frame]
+  (let [id (:id keyword)
         [end-label fault-label] (repeatedly label)]
     `[~@(emit-line-number env)
       [:get-static ~(name (frame :class)) ~(str "thunk__" id) :clojure.lang.ILookupThunk]
       [:dup]
-      ~@(emit (first args) frame)
+      ~@(emit target frame)
       [:dup-x2]
       [:invoke-interface [:clojure.lang.ILookupThunk/get :java.lang.Object] :java.lang.Object]
       [:dup-x2]
@@ -556,11 +556,10 @@
     ~@(emit-args-and-invoke args (assoc frame :to-clear? to-clear?))])
 
 (defmethod -emit :protocol-invoke
-  [{:keys [fn args env to-clear?]} frame]
+  [{:keys [protocol-fn target args env to-clear?]} frame]
   (let [[on-label call-label end-label] (repeatedly label)
-        v (:var fn)
-        [target & args] args
-        id (:id fn)
+        v (:var protocol-fn)
+        id (:id protocol-fn)
 
         ^Class pinterface (:on-interface @(:protocol (meta v)))]
     `[~@(emit target frame)
@@ -579,7 +578,7 @@
       [:put-static ~(frame :class) ~(str "cached__class__" id) :java.lang.Class]
 
       [:mark ~call-label]
-      ~@(emit-var fn frame)
+      ~@(emit-var protocol-fn frame)
       [:invoke-virtual [:clojure.lang.Var/getRawRoot] :java.lang.Object]
       [:swap]
       ~@(emit-args-and-invoke args (assoc frame :to-clear? to-clear?) true)
@@ -592,7 +591,7 @@
           [[:insn :ACONST_NULL]
            [:var-insn :clojure.lang.Object/ISTORE 0]])
       [:invoke-interface [~(keyword (.getName pinterface)
-                                    (munge (name (:form fn))))
+                                    (munge (name (:form protocol-fn))))
                           ~@(repeat (count args) :java.lang.Object)] :java.lang.Object]
 
       [:mark ~end-label]]))
@@ -925,7 +924,7 @@
 
 ;; addAnnotations
 (defmethod -emit :method
-  [{:keys [this methods params name bridges tag fixed-arity variadic? body env]}
+  [{:keys [this params name bridges tag fixed-arity variadic? body env]}
    {:keys [class] :as frame}]
 
   (let [method-name name
