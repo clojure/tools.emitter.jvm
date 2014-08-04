@@ -438,7 +438,10 @@
    (.visitIntInsn gen Opcodes/BIPUSH (int x))
 
    (boolean? x)
-   (.push gen (boolean x))))
+   (.push gen (boolean x))
+
+   :else
+   (throw (ex-info "Invalid argument to :push" {:val x}))))
 
 (defn compute-attr [attr]
   (reduce (fn [r x] (+ r (opcode x))) 0 attr))
