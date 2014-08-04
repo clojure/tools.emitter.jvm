@@ -20,8 +20,10 @@
   (:import (clojure.lang IFn DynamicClassLoader Atom)))
 
 (defn compile-and-load
-  [{:keys [class-name] :as class-ast} class-loader]
-  (.defineClass ^DynamicClassLoader class-loader class-name (t/-compile class-ast) nil))
+  ([class-ast]
+     (compile-and-load class-ast (clojure.lang.RT/makeClassLoader)))
+  ([{:keys [class-name] :as class-ast} class-loader]
+     (.defineClass ^DynamicClassLoader class-loader class-name (t/-compile class-ast) nil)))
 
 (defn eval
   "(eval form)
