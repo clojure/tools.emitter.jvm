@@ -117,6 +117,8 @@ Developer Information
 
 * [GitHub project](https://github.com/clojure/tools.emitter.jvm)
 
+* [API index](http://clojure.github.io/tools.emitter.jvm)
+
 * [Bug Tracker](http://dev.clojure.org/jira/browse/TEMJVM)
 
 * [Continuous Integration](http://build.clojure.org/job/tools.emitter.jvm/)
