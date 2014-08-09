@@ -71,6 +71,7 @@ user=> (clojure.pprint/pprint 1)
 While the bytecode produced by `tools.emitter.jvm` is similar to the one produces by Clojure itself, there are some differences:
 * `tools.emitter.jvm` is capable of clearing locals closed over by loops, in the loop exit path
 * `tools.emitter.jvm` clears the "this" local before the last tail call in a method, see [CLJ-1250](http://dev.clojure.org/jira/browse/CLJ-1250)
+* `tools.emitter.jvm` clears unused locals after their creation
 * `tools.emitter.jvm` hoists loop and try bodies into separate methods rather than wrapping them in a fn, see [CLJ-701](http://dev.clojure.org/jira/browse/CLJ-701)
 * `tools.emitter.jvm` emits keyword invoke callsites only when the keyword is not namespaces, see [CLJ-1469](http://dev.clojure.org/jira/browse/CLJ-1469)
 * `tools.emitter.jvm` emits typed bytecode, enforcing any explicit tag, this breaks some functions in `clojure.core` like `ns-interns`. This behaviour might be reconsidered in the future.
