@@ -77,7 +77,7 @@
 
   ([{:keys [env o-tag tag op type unchecked?] :as ast} frame]
      (let [bytecode (-emit ast frame)
-           statement? (= :ctx/statement (:context env))
+           statement? (isa? (:context env) :ctx/statement)
            m (meta bytecode)]
        (if statement?
          (if (:const m)
@@ -299,7 +299,7 @@
     `^:container
     [[:mark ~start-label]
      ~@(emit body frame)
-     ~@(if (= :ctx/statement context)
+     ~@(if (isa? context :ctx/statement)
          [[:insn :ACONST_NULL]
           [:pop]]
          [[:var-insn (keyword ret-local-tag "ISTORE") ret-local]])
@@ -313,7 +313,7 @@
           `[[:mark ~start-label]
             [:astore ~(:name local)]
             ~@(emit body frame)
-            ~@(if (= :ctx/statement context)
+            ~@(if (isa? context :ctx/statement)
                 (when (not (#{Void Void/TYPE} (:tag body)))
                   [(emit-pop (:tag body))])
                [[:var-insn (keyword ret-local-tag "ISTORE") ret-local]])
@@ -330,7 +330,7 @@
            [:throw-exception]])
 
      [:mark ~ret-label]
-     ~@(when (not= :ctx/statement context)
+     ~@(when-not (isa? context :ctx/statement)
          [[:var-insn (keyword ret-local-tag "ILOAD") ret-local]])
      [:mark ~(label)]
 
@@ -755,7 +755,7 @@
         method-sig (into [(keyword class (str internal-method-name))]
                          (into (mapv :tag params)
                                (mapv :o-tag locals)))
-        statement? (= :ctx/statement (:context env))
+        statement? (isa? (:context env) :ctx/statement)
         tag (if statement? :void tag)]
     `^:container
     [[:load-this]
@@ -852,7 +852,7 @@
 
             {:op :method
              :attr #{:private}
-             :method [method-sig (if (= :ctx/statement (-> body :env :context))
+             :method [method-sig (if (isa? (-> body :env :context) :ctx/statement)
                                      :void
                                      tag)]
              :code bc}))
