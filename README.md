@@ -59,6 +59,10 @@ public final class user$fn__6242 extends clojure/lang/AFunction  implements cloj
     MAXLOCALS = 1
 }
 3
+user=> (e/load "clojure.pprint")
+nil
+user=> (clojure.pprint/pprint 1)
+1
 ```
 
 ## SPONSORSHIP
