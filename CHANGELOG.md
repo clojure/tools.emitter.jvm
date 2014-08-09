@@ -1,5 +1,7 @@
 Changelog
 ========================================
+* Release 0.1.0-beta5 on 09 Aug 2014
+  * Bumped tools.analyzer.jvm version
 * Release 0.1.0-beta4 on 09 Aug 2014
   * Validation check on unsupported value type to :push
   * Added 1-arity compile-and-load
