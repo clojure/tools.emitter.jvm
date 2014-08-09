@@ -10,6 +10,8 @@ A JVM bytecode generator for ASTs compatible with tools.analyzer[.jvm].
 ## Example Usage
 
 ```clojure
+user=> (require '[clojure.tools.emitter.jvm :as e])
+nil
 user=> (e/eval '(+ 1 2))
 3
 user=> (e/eval '(+ 1 2) {:debug? true})
