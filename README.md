@@ -5,6 +5,7 @@ A JVM bytecode generator for ASTs compatible with tools.analyzer[.jvm].
 * [Example Usage](#example-usage)
 * [Differences From Clojure](#differences-from-clojure)
 * [Releases and Dependency Information](#releases-and-dependency-information)
+* [Changelog](#changelog)
 * [Developer Information](#developer-information)
 * [License](#license)
 
@@ -111,6 +112,9 @@ Latest stable release: 0.1.0-beta3
   <version>0.1.0-beta3</version>
 </dependency>
 ```
+
+[Changelog](CHANGELOG.md)
+========================================
 
 Developer Information
 ========================================
