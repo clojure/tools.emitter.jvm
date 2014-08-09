@@ -6,6 +6,10 @@
   <name>${artifactId}</name>
   <description>A JVM bytecode generator for ASTs compatible with tools.analyzer(.jvm).</description>
 
+  <properties>
+     <clojure.version>1.5.1</clojure.version>
+  </properties>
+
   <parent>
     <groupId>org.clojure</groupId>
     <artifactId>pom.contrib</artifactId>
