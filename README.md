@@ -2,6 +2,63 @@
 
 A JVM bytecode generator for ASTs compatible with tools.analyzer[.jvm].
 
+* [Example Usage](#example-usage)
+* [Releases and Dependency Information](#releases-and-dependency-information)
+* [Developer Information](#developer-information)
+* [License](#license)
+
+## Example Usage
+
+```clojure
+user=> (e/eval '(+ 1 2))
+3
+user=> (e/eval '(+ 1 2) {:debug? true})
+// class version 50.0 (50)
+// access flags 0x31
+public final class user$fn__6242 extends clojure/lang/AFunction  implements clojure/lang/IFn$L  {
+
+  // compiled from: user$fn__6242
+
+  // access flags 0x9
+  public static <clinit>()V
+    RETURN
+    MAXSTACK = 0
+    MAXLOCALS = 0
+
+  // access flags 0x1
+  public <init>()V
+    ALOAD 0
+    INVOKESPECIAL clojure/lang/AFunction.<init> ()V
+    RETURN
+    MAXSTACK = 1
+    MAXLOCALS = 1
+
+  // access flags 0x1
+  public invokePrim()J
+   L0
+    LINENUMBER 1 L0
+    LCONST_1
+    LDC 2
+    ACONST_NULL
+    ASTORE 0
+    INVOKESTATIC clojure/lang/Numbers.add (JJ)J
+    LRETURN
+    LOCALVARIABLE this Lclojure/lang/AFunction; L0 L0 0
+    MAXSTACK = 5
+    MAXLOCALS = 1
+
+  // access flags 0x1
+  public invoke()Ljava/lang/Object;
+    ALOAD 0
+    INVOKEVIRTUAL user$fn__6242.invokePrim ()J
+    INVOKESTATIC clojure/lang/RT.box (J)Ljava/lang/Number;
+    ARETURN
+    MAXSTACK = 2
+    MAXLOCALS = 1
+}
+3
+```
+
 ## SPONSORSHIP
 
 * Cognitect (http://cognitect.com/) is sponsoring tools.emitter.jvm development (https://groups.google.com/d/msg/clojure/iaP16MHpX0E/EMtnGmOz-rgJ)
