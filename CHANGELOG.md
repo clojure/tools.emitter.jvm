@@ -1,6 +1,6 @@
 Changelog
 ========================================
-* Release 0.1.0 on ???
+* Release 0.1.0-beta4 on 09 Aug 2014
   * Validation check on unsupported value type to :push
   * Added 1-arity compile-and-load
   * Updated to tools.analyzer.jvm's new AST nodes format
