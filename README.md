@@ -73,6 +73,7 @@ While the bytecode produced by `tools.emitter.jvm` is similar to the one produce
 * `tools.emitter.jvm` hoists loop and try bodies into separate methods rather than wrapping them in a fn, see [CLJ-701](http://dev.clojure.org/jira/browse/CLJ-701)
 * `tools.emitter.jvm` emits keyword invoke callsites only when the keyword is not namespaces, see [CLJ-1469](http://dev.clojure.org/jira/browse/CLJ-1469)
 * `tools.emitter.jvm` emits typed bytecode, enforcing any explicit tag, this breaks some functions in `clojure.core` like `ns-interns`. This behaviour might be reconsidered in the future.
+* `tools.emitter.jvm` handles [CLJ-1330](http://dev.clojure.org/jira/browse/CLJ-1330)
 
 ## SPONSORSHIP
 
