@@ -10,4 +10,5 @@
   (is (= :foo (e/eval '((fn [x] x) :foo))))
   (is (= (range 10) (e/eval '(for [x (range 10)] x))))
   (is (= [1 2] (e/eval '(:foo {:foo [1 2]}))))
-  (is (= 3 (e/eval '(first (remove #(not= 3 %) (filter odd? (map inc (range 10)))))))))
+  (is (= 3 (e/eval '(first (remove #(not= 3 %) (filter odd? (map inc (range 10))))))))
+  (is (= nil (e/load "/clojure.core"))))
