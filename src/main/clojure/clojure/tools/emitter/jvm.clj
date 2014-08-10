@@ -44,13 +44,19 @@
     An options map which will be merged with the default options
     provided to emit. Keys in this map take precidence over the default
     values provided to emit. The keys which are significant in this map
-    are documented in the t.e.jvm.emit/emit docstring."
+    are documented in the t.e.jvm.emit/emit docstring.
+
+  :analyze-opts :- (Option analyze-options-map)
+    An options map that will be passed to the analyzer. The keys which
+    are significant in this map are documented in the t.a.jvm/analyze
+    docstring."
 
   ([form]
      (eval form {}))
-  ([form {:keys [debug? emit-opts class-loader]
-          :or {debug?    false
-               emit-opts {}
+  ([form {:keys [debug? emit-opts class-loader analyze-opts]
+          :or {debug?       false
+               emit-opts    {}
+               analyze-opts {}
                class-loader (clojure.lang.RT/makeClassLoader)}
           :as options}]
      {:pre [(instance? DynamicClassLoader class-loader)]}
@@ -64,7 +70,7 @@
            (doseq [expr statements]
              (eval expr options))
            (eval ret options))
-         (let [cs (-> (a/analyze `(^:once fn* [] ~mform) (a/empty-env))
+         (let [cs (-> (a/analyze `(^:once fn* [] ~mform) (a/empty-env) analyze-opts)
                     collect-internal-methods
                     (e/emit-classes (merge {:debug? debug?} emit-opts)))
                classes (mapv #(compile-and-load % class-loader) cs)]
