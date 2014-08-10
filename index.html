@@ -96,7 +96,7 @@ namespace.
     <h2 id="clojure.tools.emitter.jvm/eval">eval</h2>
     <span id="var-type">function</span><br />
     <pre id="var-usage">Usage: (eval form)
-       (eval form {:keys [debug? emit-opts class-loader], :or {debug? false, emit-opts {}, class-loader (makeClassLoader)}, :as options})
+       (eval form {:keys [debug? emit-opts class-loader analyze-opts], :or {debug? false, emit-opts {}, analyze-opts {}, class-loader (makeClassLoader)}, :as options})
 </pre>
     <pre id="var-docstr">(eval form)
  (eval form eval-options-map)
@@ -116,10 +116,15 @@ Options
   An options map which will be merged with the default options
   provided to emit. Keys in this map take precidence over the default
   values provided to emit. The keys which are significant in this map
-  are documented in the t.e.jvm.emit/emit docstring.</pre>
+  are documented in the t.e.jvm.emit/emit docstring.
+
+:analyze-opts :- (Option analyze-options-map)
+  An options map that will be passed to the analyzer. The keys which
+  are significant in this map are documented in the t.a.jvm/analyze
+  docstring.</pre>
     
     
-    <a href="https://github.com/clojure/tools.emitter.jvm/blob/864db910549f8a4872c3c15b2a12353ce24d2054/src/main/clojure/clojure/tools/emitter/jvm.clj#L28" id="var-source">Source</a>
+    <a href="https://github.com/clojure/tools.emitter.jvm/blob/d4b8db21d86b23c741e778d13ed1f7ecd667159a/src/main/clojure/clojure/tools/emitter/jvm.clj#L28" id="var-source">Source</a>
   </div><div id="var-entry">
     <br />
     <hr />
@@ -154,7 +159,7 @@ Options
   in eval-opts.</pre>
     
     
-    <a href="https://github.com/clojure/tools.emitter.jvm/blob/864db910549f8a4872c3c15b2a12353ce24d2054/src/main/clojure/clojure/tools/emitter/jvm.clj#L75" id="var-source">Source</a>
+    <a href="https://github.com/clojure/tools.emitter.jvm/blob/d4b8db21d86b23c741e778d13ed1f7ecd667159a/src/main/clojure/clojure/tools/emitter/jvm.clj#L81" id="var-source">Source</a>
   </div>
 </div>
 <br />
@@ -190,7 +195,7 @@ Options
   Controls development debug level printing throughout code generation.</pre>
     
     
-    <a href="https://github.com/clojure/tools.emitter.jvm/blob/6484dc80e2e84d75c80ab094e5070cc84e92444c/src/main/clojure/clojure/tools/emitter/jvm/emit.clj#L61" id="var-source">Source</a>
+    <a href="https://github.com/clojure/tools.emitter.jvm/blob/40b078de543e703610d3c214388fd77910a3780d/src/main/clojure/clojure/tools/emitter/jvm/emit.clj#L61" id="var-source">Source</a>
   </div><div id="var-entry">
     <br />
     <hr />
@@ -211,7 +216,7 @@ Options
   Controls developlent debug level printing throughout code generation.</pre>
     
     
-    <a href="https://github.com/clojure/tools.emitter.jvm/blob/6484dc80e2e84d75c80ab094e5070cc84e92444c/src/main/clojure/clojure/tools/emitter/jvm/emit.clj#L99" id="var-source">Source</a>
+    <a href="https://github.com/clojure/tools.emitter.jvm/blob/40b078de543e703610d3c214388fd77910a3780d/src/main/clojure/clojure/tools/emitter/jvm/emit.clj#L99" id="var-source">Source</a>
   </div>
 </div>
 

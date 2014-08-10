@@ -1,12 +1,12 @@
 {:namespaces
  ({:source-url
-   "https://github.com/clojure/tools.emitter.jvm/blob/864db910549f8a4872c3c15b2a12353ce24d2054/src/main/clojure/clojure/tools/emitter/jvm.clj",
+   "https://github.com/clojure/tools.emitter.jvm/blob/d4b8db21d86b23c741e778d13ed1f7ecd667159a/src/main/clojure/clojure/tools/emitter/jvm.clj",
    :wiki-url
    "http://clojure.github.com/tools.emitter.jvm/clojure.tools.emitter.jvm-api.html",
    :name "clojure.tools.emitter.jvm",
    :doc nil}
   {:source-url
-   "https://github.com/clojure/tools.emitter.jvm/blob/6484dc80e2e84d75c80ab094e5070cc84e92444c/src/main/clojure/clojure/tools/emitter/jvm/emit.clj",
+   "https://github.com/clojure/tools.emitter.jvm/blob/40b078de543e703610d3c214388fd77910a3780d/src/main/clojure/clojure/tools/emitter/jvm/emit.clj",
    :wiki-url
    "http://clojure.github.com/tools.emitter.jvm/clojure.tools.emitter.jvm.emit-api.html",
    :name "clojure.tools.emitter.jvm.emit",
@@ -15,22 +15,23 @@
  ({:arglists
    ([form]
     [form
-     {:keys [debug? emit-opts class-loader],
+     {:keys [debug? emit-opts class-loader analyze-opts],
       :or
       {debug? false,
        emit-opts {},
+       analyze-opts {},
        class-loader (clojure.lang.RT/makeClassLoader)},
       :as options}]),
    :name "eval",
    :namespace "clojure.tools.emitter.jvm",
    :source-url
-   "https://github.com/clojure/tools.emitter.jvm/blob/864db910549f8a4872c3c15b2a12353ce24d2054/src/main/clojure/clojure/tools/emitter/jvm.clj#L28",
+   "https://github.com/clojure/tools.emitter.jvm/blob/d4b8db21d86b23c741e778d13ed1f7ecd667159a/src/main/clojure/clojure/tools/emitter/jvm.clj#L28",
    :raw-source-url
-   "https://github.com/clojure/tools.emitter.jvm/raw/864db910549f8a4872c3c15b2a12353ce24d2054/src/main/clojure/clojure/tools/emitter/jvm.clj",
+   "https://github.com/clojure/tools.emitter.jvm/raw/d4b8db21d86b23c741e778d13ed1f7ecd667159a/src/main/clojure/clojure/tools/emitter/jvm.clj",
    :wiki-url
    "http://clojure.github.com/tools.emitter.jvm//clojure.tools.emitter.jvm-api.html#clojure.tools.emitter.jvm/eval",
    :doc
-   "(eval form)\n (eval form eval-options-map)\n\nForm is a read Clojure s expression represented as a list.\nEval-options-map is a map, defaulting to the empty map, the\nfollowing values of which are significant. Returns the result of\nevaling the input expression.\n\nOptions\n-----------\n:debug? :- (Option Bool)\n  Enables or disables printing in eval. Used as the default value for\n  printing in the emitter.\n\n:emit-opts :- (Option emit-options-map)\n  An options map which will be merged with the default options\n  provided to emit. Keys in this map take precidence over the default\n  values provided to emit. The keys which are significant in this map\n  are documented in the t.e.jvm.emit/emit docstring.",
+   "(eval form)\n (eval form eval-options-map)\n\nForm is a read Clojure s expression represented as a list.\nEval-options-map is a map, defaulting to the empty map, the\nfollowing values of which are significant. Returns the result of\nevaling the input expression.\n\nOptions\n-----------\n:debug? :- (Option Bool)\n  Enables or disables printing in eval. Used as the default value for\n  printing in the emitter.\n\n:emit-opts :- (Option emit-options-map)\n  An options map which will be merged with the default options\n  provided to emit. Keys in this map take precidence over the default\n  values provided to emit. The keys which are significant in this map\n  are documented in the t.e.jvm.emit/emit docstring.\n\n:analyze-opts :- (Option analyze-options-map)\n  An options map that will be passed to the analyzer. The keys which\n  are significant in this map are documented in the t.a.jvm/analyze\n  docstring.",
    :var-type "function",
    :line 28,
    :file "src/main/clojure/clojure/tools/emitter/jvm.clj"}
@@ -46,24 +47,24 @@
    :name "load",
    :namespace "clojure.tools.emitter.jvm",
    :source-url
-   "https://github.com/clojure/tools.emitter.jvm/blob/864db910549f8a4872c3c15b2a12353ce24d2054/src/main/clojure/clojure/tools/emitter/jvm.clj#L75",
+   "https://github.com/clojure/tools.emitter.jvm/blob/d4b8db21d86b23c741e778d13ed1f7ecd667159a/src/main/clojure/clojure/tools/emitter/jvm.clj#L81",
    :raw-source-url
-   "https://github.com/clojure/tools.emitter.jvm/raw/864db910549f8a4872c3c15b2a12353ce24d2054/src/main/clojure/clojure/tools/emitter/jvm.clj",
+   "https://github.com/clojure/tools.emitter.jvm/raw/d4b8db21d86b23c741e778d13ed1f7ecd667159a/src/main/clojure/clojure/tools/emitter/jvm.clj",
    :wiki-url
    "http://clojure.github.com/tools.emitter.jvm//clojure.tools.emitter.jvm-api.html#clojure.tools.emitter.jvm/load",
    :doc
    "(load resource)\n (load resource load-options-map)\n\nResource is a string identifier for a Clojure resource on the\nclasspath. Load-options is a a map, defalting to the empty map, in\nwhich the following keys are meaningful. Returns nil.\n\nOptions\n-----------\n:debug? :- (Option Bool)\n  Enables or disables printing in eval. Used as the default value for\n  printing in the emitter.\n\n:eval-opts  :- (Option eval-options-map)\n  An options map which will be merged with the default options\n  provided to eval. Keys set in this map take precidence over the\n  default values supplied to eval. The keys which are significant in\n  this map are documented in the t.e.jvm/eval docstring.\n\n:class-loader :- (Option ClassLoader)\n  An optional classloader into which compiled functions will be\n  injected. If not provided, a new Clojure classloader will be\n  used. If a class loader is provided here, one need not be provided\n  in eval-opts.",
    :var-type "function",
-   :line 75,
+   :line 81,
    :file "src/main/clojure/clojure/tools/emitter/jvm.clj"}
   {:arglists
    ([ast] [{:keys [env o-tag tag op type unchecked?], :as ast} frame]),
    :name "emit",
    :namespace "clojure.tools.emitter.jvm.emit",
    :source-url
-   "https://github.com/clojure/tools.emitter.jvm/blob/6484dc80e2e84d75c80ab094e5070cc84e92444c/src/main/clojure/clojure/tools/emitter/jvm/emit.clj#L61",
+   "https://github.com/clojure/tools.emitter.jvm/blob/40b078de543e703610d3c214388fd77910a3780d/src/main/clojure/clojure/tools/emitter/jvm/emit.clj#L61",
    :raw-source-url
-   "https://github.com/clojure/tools.emitter.jvm/raw/6484dc80e2e84d75c80ab094e5070cc84e92444c/src/main/clojure/clojure/tools/emitter/jvm/emit.clj",
+   "https://github.com/clojure/tools.emitter.jvm/raw/40b078de543e703610d3c214388fd77910a3780d/src/main/clojure/clojure/tools/emitter/jvm/emit.clj",
    :wiki-url
    "http://clojure.github.com/tools.emitter.jvm//clojure.tools.emitter.jvm-api.html#clojure.tools.emitter.jvm.emit/emit",
    :doc
@@ -75,9 +76,9 @@
    :name "emit-classes",
    :namespace "clojure.tools.emitter.jvm.emit",
    :source-url
-   "https://github.com/clojure/tools.emitter.jvm/blob/6484dc80e2e84d75c80ab094e5070cc84e92444c/src/main/clojure/clojure/tools/emitter/jvm/emit.clj#L99",
+   "https://github.com/clojure/tools.emitter.jvm/blob/40b078de543e703610d3c214388fd77910a3780d/src/main/clojure/clojure/tools/emitter/jvm/emit.clj#L99",
    :raw-source-url
-   "https://github.com/clojure/tools.emitter.jvm/raw/6484dc80e2e84d75c80ab094e5070cc84e92444c/src/main/clojure/clojure/tools/emitter/jvm/emit.clj",
+   "https://github.com/clojure/tools.emitter.jvm/raw/40b078de543e703610d3c214388fd77910a3780d/src/main/clojure/clojure/tools/emitter/jvm/emit.clj",
    :wiki-url
    "http://clojure.github.com/tools.emitter.jvm//clojure.tools.emitter.jvm-api.html#clojure.tools.emitter.jvm.emit/emit-classes",
    :doc
