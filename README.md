@@ -77,6 +77,10 @@ While the bytecode produced by `tools.emitter.jvm` is similar to the one produce
 * `tools.emitter.jvm` emits typed bytecode, enforcing any explicit tag, this breaks some functions in `clojure.core` like `ns-interns`. This behaviour might be reconsidered in the future.
 * `tools.emitter.jvm` handles [CLJ-1330](http://dev.clojure.org/jira/browse/CLJ-1330)
 
+## Performances
+
+`clojure.tools.emitter.jvm/eval` is currently around 10x slower than `clojure.core/eval`
+
 ## SPONSORSHIP
 
 * Cognitect (http://cognitect.com/) is sponsoring tools.emitter.jvm development (https://groups.google.com/d/msg/clojure/iaP16MHpX0E/EMtnGmOz-rgJ)
