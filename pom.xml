@@ -27,12 +27,12 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>tools.analyzer.jvm</artifactId>
-      <version>0.5.3-SNAPSHOT</version>
+      <version>0.5.7-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>tools.reader</artifactId>
-      <version>0.8.5</version>
+      <version>0.8.8</version>
     </dependency>
     <dependency>
       <groupId>org.ow2.asm</groupId>
