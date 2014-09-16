@@ -11,7 +11,9 @@
 
 (def ^:dynamic ^:private *internal-methods*)
 
-(defn collect-internal-methods [ast]
+(defn collect-internal-methods
+  {:pass-info {:walk :none :depends #{} :compiler true}} ;; ensure it's run last
+  [ast]
   (case (:op ast)
    :fn-method
    (binding [*internal-methods* (atom [])]

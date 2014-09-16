@@ -10,8 +10,15 @@
   (:refer-clojure :exclude [eval macroexpand-1 macroexpand load])
   (:require [clojure.tools.analyzer.jvm :as a]
             [clojure.tools.analyzer :refer [macroexpand-1 macroexpand]]
+            [clojure.tools.analyzer.passes :refer [schedule]]
+            [clojure.tools.analyzer.env :as env]
+            [clojure.tools.analyzer.utils :refer [mmerge]]
             [clojure.tools.emitter.jvm.emit :as e]
             [clojure.tools.emitter.jvm.transform :as t]
+            [clojure.tools.analyzer.passes.jvm
+             [annotate-class-id :refer [annotate-class-id]]
+             [annotate-internal-name :refer [annotate-internal-name]]
+             [infer-tag :refer [ensure-tag]]]
             [clojure.tools.emitter.passes.jvm.collect-internal-methods :refer :all]
             [clojure.java.io :as io]
             [clojure.string :as s]
@@ -24,6 +31,15 @@
      (compile-and-load class-ast (clojure.lang.RT/makeClassLoader)))
   ([{:keys [class-name] :as class-ast} class-loader]
      (.defineClass ^DynamicClassLoader class-loader class-name (t/-compile class-ast) nil)))
+
+(def run-passes
+  (schedule (into a/default-passes
+                  #{#'collect-internal-methods
+
+                    #'ensure-tag
+
+                    #'annotate-class-id
+                    #'annotate-internal-name})))
 
 (defn eval
   "(eval form)
@@ -56,7 +72,7 @@
   ([form {:keys [debug? emit-opts class-loader analyze-opts]
           :or {debug?       false
                emit-opts    {}
-               analyze-opts {}
+               analyze-opts a/default-passes-opts
                class-loader (clojure.lang.RT/makeClassLoader)}
           :as options}]
      {:pre [(instance? DynamicClassLoader class-loader)]}
@@ -70,11 +86,11 @@
            (doseq [expr statements]
              (eval expr options))
            (eval ret options))
-         (let [cs (-> (a/analyze `(^:once fn* [] ~mform) (a/empty-env) analyze-opts)
-                    collect-internal-methods
-                    (e/emit-classes (merge {:debug? debug?} emit-opts)))
-               classes (mapv #(compile-and-load % class-loader) cs)]
-           ((.newInstance ^Class (last classes))))))))
+         (binding [a/run-passes run-passes]
+           (let [cs (-> (a/analyze `(^:once fn* [] ~mform) (a/empty-env) analyze-opts)
+                      (e/emit-classes (merge {:debug? debug?} emit-opts)))
+                 classes (mapv #(compile-and-load % class-loader) cs)]
+             ((.newInstance ^Class (last classes)))))))))
 
 (def root-directory @#'clojure.core/root-directory)
 
