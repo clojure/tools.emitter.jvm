@@ -32,14 +32,17 @@
   ([{:keys [class-name] :as class-ast} class-loader]
      (.defineClass ^DynamicClassLoader class-loader class-name (t/-compile class-ast) nil)))
 
-(def run-passes
-  (schedule (into a/default-passes
+
+(def passes (into a/default-passes
                   #{#'collect-internal-methods
 
                     #'ensure-tag
 
                     #'annotate-class-id
-                    #'annotate-internal-name})))
+                    #'annotate-internal-name}))
+
+(def run-passes
+  (schedule passes))
 
 (defn eval
   "(eval form)

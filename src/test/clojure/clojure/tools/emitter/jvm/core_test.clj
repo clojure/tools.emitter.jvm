@@ -1,6 +1,7 @@
 (ns clojure.tools.emitter.jvm.core-test
   (:require [clojure.tools.emitter.jvm :as e]
-            [clojure.test :refer :all]))
+            [clojure.test :refer :all]
+            [clojure.tools.analyzer.passes :refer [schedule]]))
 
 (deftest eval-test
   (is (= 1 (e/eval 1)))
@@ -12,5 +13,8 @@
   (is (= [1 2] (e/eval '(:foo {:foo [1 2]}))))
   (is (= 3 (e/eval '(first (remove #(not= 3 %) (filter odd? (map inc (range 10)))))))))
 
+
+
 (deftest load-core-test
-  (is (= nil (e/load "/clojure.core"))))
+  (is (= nil (e/load "/clojure.core"))
+      (schedule e/pases {:debug? true})))
