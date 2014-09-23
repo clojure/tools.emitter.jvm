@@ -924,7 +924,7 @@
 
 ;; addAnnotations
 (defmethod -emit :method
-  [{:keys [this params name bridges tag fixed-arity variadic? body env]}
+  [{:keys [this params name bridges tag fixed-arity variadic? body env internal-methods]}
    {:keys [class] :as frame}]
 
   (let [method-name name
@@ -945,7 +945,8 @@
                     :o-tag (or (:tag body) Object))
                   (assoc frame
                     :loop-label  loop-label
-                    :loop-locals params))
+                    :loop-locals params
+                    :params      params))
           [:mark ~end-label]
           [:return-value]
           [:end-method]]]
@@ -964,7 +965,9 @@
                      [:load-args]
                      [:invoke-virtual ~@target]
                      [:return-value]
-                     [:end-method]]}))]))
+                     [:end-method]]}))
+      ~@(when internal-methods
+          (emit-internal-methods internal-methods (assoc frame :params params)))]))
 
 (defmethod -emit :local
   [{:keys [to-clear? local name tag o-tag arg-id]}

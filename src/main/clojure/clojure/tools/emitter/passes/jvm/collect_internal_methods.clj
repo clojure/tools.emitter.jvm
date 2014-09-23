@@ -15,18 +15,18 @@
   {:pass-info {:walk :none :depends #{} :compiler true}} ;; ensure it's run last
   [ast]
   (case (:op ast)
-   :fn-method
-   (binding [*internal-methods* (atom [])]
-     (let [ast (update-children ast collect-internal-methods)]
-       (merge ast
-              (when-let [m (seq @*internal-methods*)]
-                {:internal-methods m}))))
+    (:method :fn-method)
+    (binding [*internal-methods* (atom [])]
+      (let [ast (update-children ast collect-internal-methods)]
+        (merge ast
+               (when-let [m (seq @*internal-methods*)]
+                 {:internal-methods m}))))
 
-   (:try :loop)
-   (let [ast (update-children (assoc ast :internal-method-name
-                                     (or (:loop-id ast) (gensym "try__")))
-                              collect-internal-methods)]
-     (swap! *internal-methods* conj ast)
-     ast)
+    (:try :loop)
+    (let [ast (update-children (assoc ast :internal-method-name
+                                      (or (:loop-id ast) (gensym "try__")))
+                               collect-internal-methods)]
+      (swap! *internal-methods* conj ast)
+      ast)
 
-   (update-children ast collect-internal-methods)))
+    (update-children ast collect-internal-methods)))
