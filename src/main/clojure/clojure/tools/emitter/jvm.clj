@@ -44,6 +44,9 @@
 (def run-passes
   (schedule passes))
 
+(def default-passes-opts
+  (dissoc a/default-passes-opts :uniquify/uniquify-env))
+
 (defn eval
   "(eval form)
    (eval form eval-options-map)
@@ -75,7 +78,7 @@
   ([form {:keys [debug? emit-opts class-loader analyze-opts]
           :or {debug?       false
                emit-opts    {}
-               analyze-opts a/default-passes-opts
+               analyze-opts default-passes-opts
                class-loader (clojure.lang.RT/makeClassLoader)}
           :as options}]
      {:pre [(instance? DynamicClassLoader class-loader)]}
