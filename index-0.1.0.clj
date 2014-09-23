@@ -6,7 +6,7 @@
    :name "clojure.tools.emitter.jvm",
    :doc nil}
   {:source-url
-   "https://github.com/clojure/tools.emitter.jvm/blob/40b078de543e703610d3c214388fd77910a3780d/src/main/clojure/clojure/tools/emitter/jvm/emit.clj",
+   "https://github.com/clojure/tools.emitter.jvm/blob/08767430b14273183666526006049a6d09e79418/src/main/clojure/clojure/tools/emitter/jvm/emit.clj",
    :wiki-url
    "http://clojure.github.com/tools.emitter.jvm/clojure.tools.emitter.jvm.emit-api.html",
    :name "clojure.tools.emitter.jvm.emit",
@@ -62,9 +62,9 @@
    :name "emit",
    :namespace "clojure.tools.emitter.jvm.emit",
    :source-url
-   "https://github.com/clojure/tools.emitter.jvm/blob/40b078de543e703610d3c214388fd77910a3780d/src/main/clojure/clojure/tools/emitter/jvm/emit.clj#L61",
+   "https://github.com/clojure/tools.emitter.jvm/blob/08767430b14273183666526006049a6d09e79418/src/main/clojure/clojure/tools/emitter/jvm/emit.clj#L61",
    :raw-source-url
-   "https://github.com/clojure/tools.emitter.jvm/raw/40b078de543e703610d3c214388fd77910a3780d/src/main/clojure/clojure/tools/emitter/jvm/emit.clj",
+   "https://github.com/clojure/tools.emitter.jvm/raw/08767430b14273183666526006049a6d09e79418/src/main/clojure/clojure/tools/emitter/jvm/emit.clj",
    :wiki-url
    "http://clojure.github.com/tools.emitter.jvm//clojure.tools.emitter.jvm-api.html#clojure.tools.emitter.jvm.emit/emit",
    :doc
@@ -76,9 +76,9 @@
    :name "emit-classes",
    :namespace "clojure.tools.emitter.jvm.emit",
    :source-url
-   "https://github.com/clojure/tools.emitter.jvm/blob/40b078de543e703610d3c214388fd77910a3780d/src/main/clojure/clojure/tools/emitter/jvm/emit.clj#L99",
+   "https://github.com/clojure/tools.emitter.jvm/blob/08767430b14273183666526006049a6d09e79418/src/main/clojure/clojure/tools/emitter/jvm/emit.clj#L99",
    :raw-source-url
-   "https://github.com/clojure/tools.emitter.jvm/raw/40b078de543e703610d3c214388fd77910a3780d/src/main/clojure/clojure/tools/emitter/jvm/emit.clj",
+   "https://github.com/clojure/tools.emitter.jvm/raw/08767430b14273183666526006049a6d09e79418/src/main/clojure/clojure/tools/emitter/jvm/emit.clj",
    :wiki-url
    "http://clojure.github.com/tools.emitter.jvm//clojure.tools.emitter.jvm-api.html#clojure.tools.emitter.jvm.emit/emit-classes",
    :doc
