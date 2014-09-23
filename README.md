@@ -79,7 +79,7 @@ While the bytecode produced by `tools.emitter.jvm` is similar to the one produce
 
 ## Performances
 
-`clojure.tools.emitter.jvm/eval` is currently around 10x slower than `clojure.core/eval`
+`clojure.tools.emitter.jvm/eval` is currently between 5x and 8x slower than `clojure.core/eval`
 
 ## SPONSORSHIP
 
