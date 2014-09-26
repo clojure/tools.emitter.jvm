@@ -15,10 +15,13 @@
             [clojure.tools.analyzer.utils :refer [mmerge]]
             [clojure.tools.emitter.jvm.emit :as e]
             [clojure.tools.emitter.jvm.transform :as t]
+            [clojure.tools.analyzer.passes.collect-closed-overs :refer [collect-closed-overs]]
             [clojure.tools.analyzer.passes.jvm
              [annotate-class-id :refer [annotate-class-id]]
              [annotate-internal-name :refer [annotate-internal-name]]
-             [infer-tag :refer [ensure-tag]]]
+             [infer-tag :refer [ensure-tag]]
+             [clear-locals :refer [clear-locals]]
+             [collect :refer [collect]]]
             [clojure.tools.emitter.passes.jvm.collect-internal-methods :refer :all]
             [clojure.java.io :as io]
             [clojure.string :as s]
@@ -39,7 +42,11 @@
                     #'ensure-tag
 
                     #'annotate-class-id
-                    #'annotate-internal-name}))
+                    #'annotate-internal-name
+
+                    #'collect
+                    #'collect-closed-overs
+                    #'clear-locals}))
 
 (def run-passes
   (schedule passes))
