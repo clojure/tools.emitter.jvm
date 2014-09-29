@@ -16,12 +16,10 @@
             [clojure.tools.emitter.jvm.emit :as e]
             [clojure.tools.emitter.jvm.transform :as t]
             [clojure.tools.analyzer.passes.collect-closed-overs :refer [collect-closed-overs]]
-            [clojure.tools.analyzer.passes.jvm
-             [infer-tag :refer [ensure-tag]]
-             [clear-locals :refer [clear-locals]]
-             [collect :refer [collect]]]
             [clojure.tools.emitter.passes.jvm
+             [collect :refer [collect]]
              [collect-internal-methods :refer :all]
+             [clear-locals :refer [clear-locals]]
              [annotate-class-id :refer [annotate-class-id]]
              [annotate-internal-name :refer [annotate-internal-name]]
              [ensure-tag :refer [ensure-tag]]]
