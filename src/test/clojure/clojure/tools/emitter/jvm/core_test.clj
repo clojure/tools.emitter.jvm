@@ -15,6 +15,5 @@
 
 
 
-(deftest load-core-test
-  (is (= nil (e/load "/clojure.core"))
-      (schedule e/passes {:debug? true})))
+;; (deftest load-core-test
+;;   (is (= nil (e/load "/clojure.core"))))
