@@ -6,6 +6,7 @@ A JVM bytecode generator for ASTs compatible with tools.analyzer[.jvm].
 * [Differences From Clojure](#differences-from-clojure)
 * [Releases and Dependency Information](#releases-and-dependency-information)
 * [Changelog](#changelog)
+* [Public API](#public-api)
 * [Developer Information](#developer-information)
 * [License](#license)
 
@@ -121,12 +122,16 @@ Latest stable release: 0.1.0-beta5
 [Changelog](CHANGELOG.md)
 ========================================
 
+API Index
+========================================
+
+* [CrossClj Documentation](http://crossclj.info/doc/org.clojure/tools.emitter.jvm/lastest/index.html)
+* [API index](http://clojure.github.io/tools.emitter.jvm)
+
 Developer Information
 ========================================
 
 * [GitHub project](https://github.com/clojure/tools.emitter.jvm)
-
-* [API index](http://clojure.github.io/tools.emitter.jvm)
 
 * [Bug Tracker](http://dev.clojure.org/jira/browse/TEMJVM)
 
