@@ -10,6 +10,8 @@ A JVM bytecode generator for ASTs compatible with tools.analyzer[.jvm].
 * [Developer Information](#developer-information)
 * [License](#license)
 
+When trying out `tools.emitter.jvm` be careful not to include in your project.clj's `:dependencies` a different version of [tools.analyzer.jvm](https://github.com/clojure/tools.analyzer.jvm) or [tools.analyzer](https://github.com/clojure/tools.analyzer) than the one required by `tools.emitter.jvm` otherwise the library probably won't work and trying to evaluate clojure forms with it will likely produce errors.
+
 ## Example Usage
 
 ```clojure
