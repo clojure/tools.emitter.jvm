@@ -14,7 +14,7 @@
 (deftest collect-test
   (binding [ana.jvm/run-passes (schedule (conj ana.jvm/default-passes #'collect #'collect-closed-overs))]
     (let [c-test (-> (ast1 (let [a 1 b 2] (fn [x] (fn [] [+ (:foo {}) x a]))))
-                   :body :ret)]
+                   :body)]
       (is (= '#{a__#0} (-> c-test :closed-overs keys set)))
       (is (set/subset? #{{:form :foo
                           :tag  Keyword
@@ -25,8 +25,8 @@
                          {:form {}
                           :tag  PersistentArrayMap
                           :meta nil}}
-                       (-> c-test :methods first :body :ret :constants keys set))) ;; it registers metadata too (line+col info)
-      (is (= '#{a__#0 x__#0} (-> c-test :methods first :body :ret :closed-overs keys set))))))
+                       (-> c-test :methods first :body :constants keys set))) ;; it registers metadata too (line+col info)
+      (is (= '#{a__#0 x__#0} (-> c-test :methods first :body :closed-overs keys set))))))
 
 (deftest clear-locals-test
   (binding [ana.jvm/run-passes (schedule (conj ana.jvm/default-passes #'clear-locals))]
@@ -40,24 +40,24 @@
       (is (= true (-> f-expr :ret :else :then :to-clear?)))
       (is (= true (-> f-expr :ret :else :else :to-clear?))))
     (let [f-expr (-> (ast1 (fn [x] (loop [a x] (if 1 x (do x (recur x))))))
-                   :methods first :body :ret)]
+                   :methods first :body )]
       (is (= true (-> f-expr :bindings first :init :to-clear? nil?)))
-      (is (= true (-> f-expr :body :ret :then :to-clear?)))
-      (is (= true (-> f-expr :body :ret :else :statements first :to-clear? nil?)))
-      (is (= true (-> f-expr :body :ret :else :ret :exprs first :to-clear? nil?))))
+      (is (= true (-> f-expr :body :then :to-clear?)))
+      (is (= true (-> f-expr :body :else :statements first :to-clear? nil?)))
+      (is (= true (-> f-expr :body :else :ret :exprs first :to-clear? nil?))))
     (let [f-expr (-> (ast1 (loop [] (let [a 1] (loop [] a)) (recur)))
-                   :body :statements first :body :ret :body :ret)]
+                   :body :statements first :body :body)]
       (is (= true (-> f-expr :to-clear?))))
     (let [f-expr (-> (ast1 (loop [] (let [a 1] (loop [] (if 1 a (recur)))) (recur)))
-                   :body :statements first :body :ret :body :ret :then)]
+                   :body :statements first :body :body  :then)]
       (is (= true (-> f-expr :to-clear?))))
     (let [f-expr (-> (ast1 (let [a 1] (loop [] (let [b 2] (loop [] (if 1 [a b] (recur)))) (recur))))
-                   :body :ret :body :statements first :body :ret :body :ret :then :items)]
+                   :body :body :statements first :body :body :then :items)]
       (is (= true (-> f-expr first :to-clear? nil?)))
       (is (= true (-> f-expr second :to-clear?))))
     (let [f-expr (-> (ast1 (let [a 1] (loop [] (if 1 a) (recur))))
-                   :body :ret :body :statements first :then)]
+                   :body :body :statements first :then)]
       (is (= true (-> f-expr :to-clear? nil?))))
     (let [f-expr (-> (ast1 (let [a 1] (loop [] (let [x (if 1 a)]) (recur))))
-                   :body :ret :body :statements first :bindings first :init :then)]
+                   :body :body :statements first :bindings first :init :then)]
       (is (= true (-> f-expr :to-clear? nil?))))))
