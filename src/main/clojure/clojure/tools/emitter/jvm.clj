@@ -15,7 +15,9 @@
             [clojure.tools.analyzer.utils :refer [mmerge]]
             [clojure.tools.emitter.jvm.emit :as e]
             [clojure.tools.emitter.jvm.transform :as t]
-            [clojure.tools.analyzer.passes.collect-closed-overs :refer [collect-closed-overs]]
+            [clojure.tools.analyzer.passes
+             [collect-closed-overs :refer [collect-closed-overs]]
+             [trim :refer [trim]]]
             [clojure.tools.emitter.passes.jvm
              [collect :refer [collect]]
              [collect-internal-methods :refer :all]
@@ -36,7 +38,7 @@
      (.defineClass ^DynamicClassLoader class-loader class-name (t/-compile class-ast) nil)))
 
 
-(def passes (into a/default-passes
+(def passes (into (disj a/default-passes #'trim)
                   #{#'collect-internal-methods
 
                     #'ensure-tag
