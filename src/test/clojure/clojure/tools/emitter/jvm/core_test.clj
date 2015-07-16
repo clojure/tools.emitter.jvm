@@ -11,6 +11,8 @@
   (is (= :foo (e/eval '((fn [x] x) :foo))))
   (is (= (range 10) (e/eval '(for [x (range 10)] x))))
   (is (= [1 2] (e/eval '(:foo {:foo [1 2]}))))
+  (is (= 3 (e/eval '(do (def a 3) 3))))
+  (is (= 6 (e/eval '(do (def g (fn [x] (* x 3))) (g 2)))))
   (is (= 3 (e/eval '(first (remove #(not= 3 %) (filter odd? (map inc (range 10)))))))))
 
 
