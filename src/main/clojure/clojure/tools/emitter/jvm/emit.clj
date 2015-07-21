@@ -299,11 +299,11 @@
 
 (defmethod -emit :map
   [{:keys [keys vals form]} frame]
-  `[~@(emit-as-array (interleave keys vals) frame)
-    ~@(if (sorted? form)
-        [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
-         [:invoke-static [:clojure.lang.PersistentTreeMap/create :clojure.lang.ISeq] :clojure.lang.PersistentTreeMap]]
-        [[:invoke-static [:clojure.lang.RT/map :objects] :clojure.lang.IPersistentMap]])])
+  [(emit-as-array (interleave keys vals) frame)
+   (if (sorted? form)
+     [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
+      [:invoke-static [:clojure.lang.PersistentTreeMap/create :clojure.lang.ISeq] :clojure.lang.PersistentTreeMap]]
+     [[:invoke-static [:clojure.lang.RT/map :objects] :clojure.lang.IPersistentMap]])])
 
 (defmethod -emit :vector
   [{:keys [items]} frame]
