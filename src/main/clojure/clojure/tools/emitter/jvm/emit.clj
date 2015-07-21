@@ -288,14 +288,14 @@
   (-emit-set! ast frame))
 
 (defn emit-as-array [list frame]
-  `[[:push ~(int (count list))]
-    [:new-array :java.lang.Object]
-    ~@(mapcat (fn [i item]
-                `[[:dup]
-                  [:push ~(int i)]
-                  ~@(emit item frame)
-                  [:array-store :java.lang.Object]])
-              (range) list)])
+  [[:push (int (count list))]
+   [:new-array :java.lang.Object]
+   (mapcat (fn [i item]
+             `[[:dup]
+               [:push ~(int i)]
+               ~@(emit item frame)
+               [:array-store :java.lang.Object]])
+           (range) list)])
 
 (defmethod -emit :map
   [{:keys [keys vals form]} frame]
