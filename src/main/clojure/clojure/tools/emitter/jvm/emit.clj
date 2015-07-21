@@ -257,9 +257,9 @@
 
 (defmethod -emit-set! :var
   [{:keys [target val] :as ast} frame]
-  `[~@(emit-var target frame)
-    ~@(emit val frame)
-    [:invoke-virtual [:clojure.lang.Var/set :java.lang.Object] :java.lang.Object]])
+  [(emit-var target frame)
+   (emit val frame)
+   [:invoke-virtual [:clojure.lang.Var/set :java.lang.Object] :java.lang.Object]])
 
 (defmethod -emit :the-var
   [ast frame]
