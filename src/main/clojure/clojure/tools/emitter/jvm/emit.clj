@@ -267,21 +267,21 @@
 
 (defmethod -emit :def
   [{:keys [var meta init env] :as ast} frame]
-  `[~@(emit-var ast frame)
-    ~@(when (u/dynamic? var)
-        [[:push true]
-         [:invoke-virtual [:clojure.lang.Var/setDynamic :boolean] :clojure.lang.Var]])
-    ~@(when meta
-        `[[:dup]
-          ~@(emit meta frame)
-          [:invoke-virtual [:clojure.lang.Var/setMeta :clojure.lang.IPersistentMap] :void]])
-    ~@(when init
-        `[[:dup]
-          ~@(emit init frame)
-          [:invoke-virtual [:clojure.lang.Var/bindRoot :java.lang.Object] :void]])
-    ~@(when (u/macro? var)
-        [[:dup]
-         [:invoke-virtual [:clojure.lang.Var/setMacro] :void]])])
+  [(emit-var ast frame)
+   (when (u/dynamic? var)
+     [[:push true]
+      [:invoke-virtual [:clojure.lang.Var/setDynamic :boolean] :clojure.lang.Var]])
+   (when meta
+     [[:dup]
+      (emit meta frame)
+      [:invoke-virtual [:clojure.lang.Var/setMeta :clojure.lang.IPersistentMap] :void]])
+   (when init
+     [[:dup]
+      (emit init frame)
+      [:invoke-virtual [:clojure.lang.Var/bindRoot :java.lang.Object] :void]])
+   (when (u/macro? var)
+     [[:dup]
+      [:invoke-virtual [:clojure.lang.Var/setMacro] :void]])])
 
 (defmethod -emit :set!
   [ast frame]
