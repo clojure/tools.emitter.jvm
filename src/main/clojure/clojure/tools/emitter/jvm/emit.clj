@@ -313,11 +313,11 @@
 
 (defmethod -emit :set
   [{:keys [items form]} frame]
-  `[~@(emit-as-array items frame)
-    ~@(if (sorted? form)
-        [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
-         [:invoke-static [:clojure.lang.PersistentTreeSet/create :clojure.lang.ISeq] :clojure.lang.PersistentTreeSet]]
-        [[:invoke-static [:clojure.lang.RT/set :objects] :clojure.lang.IPersistentSet]])])
+  [(emit-as-array items frame)
+   (if (sorted? form)
+     [[:invoke-static [:clojure.lang.RT/seq :java.lang.Object] :clojure.lang.ISeq]
+      [:invoke-static [:clojure.lang.PersistentTreeSet/create :clojure.lang.ISeq] :clojure.lang.PersistentTreeSet]]
+     [[:invoke-static [:clojure.lang.RT/set :objects] :clojure.lang.IPersistentSet]])])
 
 (defmethod -emit :with-meta
   [{:keys [meta expr]} frame]
