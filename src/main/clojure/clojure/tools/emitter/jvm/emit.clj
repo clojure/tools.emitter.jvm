@@ -7,7 +7,7 @@
 ;;   You must not remove this notice, or any other, from this software.
 
 (ns clojure.tools.emitter.jvm.emit
-  (:refer-clojure :exclude [cast])
+  (:refer-clojure :exclude [cast flatten])
   (:require [clojure.tools.analyzer.utils :as u]
             [clojure.tools.analyzer.jvm.utils :refer [primitive? numeric? box prim-or-obj] :as j.u]
             [clojure.string :as s]
@@ -57,6 +57,56 @@
     [:pop]))
 
 (def ^:dynamic *classes*)
+
+;; FIXME: not strict enough
+(defn op? [x]
+  (and (vector? x)
+       (keyword? (first x))))
+
+(defn flatten
+  "Walks a (recursively nested) sequence of opcodes, sequences of
+  opcodes or functions yielding the above flattening the result into a
+  single sequence of opcode vectors.
+
+  So (op1, op2 ...) -> (op1, op2 ...)
+     (op1, (op2, op3), ...) -> (op1, op2, op3, ...)
+     (op1, lambda, ...) = (concat [op1] (lambda) [...])
+
+  This allows code generation to naively return sequences without
+  working to splice or otherwise transform its results. Also provides
+  support for some level of TCO and stack use reduction by allowing
+  code generators to return functions of no arguments which are
+  expected to return results in the above grammar."
+  [inputs]
+  (loop [[e & worklist] inputs
+         acc            (transient [])]
+    (cond
+      ;; Empty worklist and no current element, exit.
+      (and (empty? worklist) (not e))
+      ,,(persistent! acc)
+
+      ;; Have an instr, add it and recur
+      (op? e)
+      ,,(recur worklist (conj! acc e))
+
+      ;; Have nothing but there is a tail, just recur
+      (nil? e)
+      ,,(recur worklist acc)
+
+      ;; Have a function which presumably returns work to do. Call it and recur
+      ;; on its result(s).
+      (fn? e)
+      ,,(recur (cons (e) worklist) acc)
+
+      ;; Have a sequence produced by something (maybe a previously expanded
+      ;; lambda call), concat it to the worklist and recur to walk it.
+      (seq? e)
+      ,,(recur (concat e worklist) acc)
+
+      ;; Something went very very wrong and the input stream is invalid. Abort.
+      :else
+      ,,(do (println e worklist (persistent! acc))
+            (throw (Exception. "Failed to transform opcode sequence!"))))))
 
 (defn emit
   "(λ AST) → Bytecode
