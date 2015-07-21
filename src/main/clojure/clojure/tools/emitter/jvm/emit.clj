@@ -100,7 +100,9 @@
 
       ;; Have a sequence produced by something (maybe a previously expanded
       ;; lambda call), concat it to the worklist and recur to walk it.
-      (seq? e)
+      (or (seq? e)
+          (list? e)
+          (vector? e))
       ,,(recur (concat e worklist) acc)
 
       ;; Something went very very wrong and the input stream is invalid. Abort.
