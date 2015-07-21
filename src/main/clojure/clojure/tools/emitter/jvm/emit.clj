@@ -79,32 +79,40 @@
   expected to return results in the above grammar."
   [inputs]
   (with-meta
-    (loop [[e & worklist] inputs
-           acc            (transient [])]
+    (loop [worklist     nil
+           [e & inputs] inputs
+           acc          (transient [])]
       (cond
         ;; Empty worklist and no current element, exit.
-        (and (empty? worklist) (not e))
+        (and (empty? worklist)
+             (empty? inputs)
+             (not e))
         ,,(persistent! acc)
+
+        (and (not e)
+             (empty? inputs)
+             (not (empty? worklist)))
+        ,,(recur (rest worklist) (first worklist) acc)
 
         ;; Have an instr, add it and recur
         (op? e)
-        ,,(recur worklist (conj! acc e))
+        ,,(recur worklist inputs (conj! acc e))
 
         ;; Have nothing but there is a tail, just recur
         (nil? e)
-        ,,(recur worklist acc)
+        ,,(recur worklist inputs acc)
 
         ;; Have a function which presumably returns work to do. Call it and recur
         ;; on its result(s).
         (fn? e)
-        ,,(recur (cons (e) worklist) acc)
+        ,,(recur (cons inputs worklist) [(e)] acc)
 
         ;; Have a sequence produced by something (maybe a previously expanded
         ;; lambda call), concat it to the worklist and recur to walk it.
         (or (seq? e)
             (list? e)
             (vector? e))
-        ,,(recur (concat e worklist) acc)
+        ,,(recur (cons inputs worklist) e acc)
 
         ;; Something went very very wrong and the input stream is invalid. Abort.
         :else
