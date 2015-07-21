@@ -126,7 +126,7 @@
      (emit ast {}))
 
   ([{:keys [env o-tag tag op type unchecked?] :as ast} frame]
-     (let [bytecode (-emit ast frame)
+     (let [bytecode (flatten (-emit ast frame))
            statement? (isa? (:context env) :ctx/statement)
            m (meta bytecode)]
        (if statement?
