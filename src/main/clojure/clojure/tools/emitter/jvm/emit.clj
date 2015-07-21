@@ -323,9 +323,9 @@
   [{:keys [meta expr]} frame]
   (into
    (emit expr frame)
-   `[~@(emit meta frame)
-     [:invoke-interface [:clojure.lang.IObj/withMeta :clojure.lang.IPersistentMap]
-      :clojure.lang.IObj]]))
+   [(emit meta frame)
+    [:invoke-interface [:clojure.lang.IObj/withMeta :clojure.lang.IPersistentMap]
+     :clojure.lang.IObj]]))
 
 (defmethod -emit :do
   [{:keys [statements ret]} frame]
