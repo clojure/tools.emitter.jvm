@@ -54,7 +54,10 @@
     (is (= 2 (f :a)))
     (is (= :default (f 6)))
     (is (= 3 (f :y)))
-    (is (= 3 (f [:x 1])))))
+    (is (= 3 (f [:x 1]))))
+  (is (= 3 (e/eval
+            '(do (deftype AType [x])
+                 (.x (AType. 3)))))))
 
 
 
