@@ -10,6 +10,7 @@
   (is (= 1 (e/eval '((fn [] 1)))))
   (is (= :foo (e/eval '((fn [x] x) :foo))))
   (is (= 1225 (e/eval '(apply + (range 50)))))
+  (is (= 1225 (e/eval `(+ ~@(range 50)))))
   (is (= (range 10) (e/eval '(for [x (range 10)] x))))
   (is (= [1 2] (e/eval '(:foo {:foo [1 2]}))))
   (is (= 3 (e/eval '(do (def a 3) 3))))
