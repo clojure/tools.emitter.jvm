@@ -65,6 +65,7 @@
           '(do (defmacro mapply [e & args]
                  `(~e ~@(butlast args) ~@(last args)))
                (mapply + 0 1 2 nil)))))
+  (is (= [:a 5] (e/eval '(let [x 5] [:a x]))))
   (is (= 3 (e/eval
             '(do (defprotocol Foo
                    (blah
