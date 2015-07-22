@@ -56,6 +56,12 @@
     (is (= 3 (f :y)))
     (is (= 3 (f [:x 1]))))
   (is (= 3 (e/eval
+            '(do (defprotocol Foo
+                   (blah
+                     [this x]))
+                 (let [r (reify Foo (blah [_ x] x))]
+                   (blah r 3))))))
+  (is (= 3 (e/eval
             '(do (deftype AType [x])
                  (.x (AType. 3)))))))
 
