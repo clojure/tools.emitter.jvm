@@ -36,7 +36,19 @@
                     (try (throw (Exception. "Foo!"))
                          (catch Exception e :catch)
                          (finally (reset! x :finally)))
-                    @x)))))
+                    @x))))
+  (let [f (e/eval
+           '(fn [x]
+              (case x
+                (1) 1
+                (:a) 2
+                ([:x 1] :y) 3
+                :default)))]
+    (is (= 1 (f 1)))
+    (is (= 2 (f :a)))
+    (is (= :default (f 6)))
+    (is (= 3 (f :y)))
+    (is (= 3 (f [:x 1])))))
 
 
 
