@@ -55,6 +55,11 @@
     (is (= :default (f 6)))
     (is (= 3 (f :y)))
     (is (= 3 (f [:x 1]))))
+  (is (= 3
+         (e/eval
+          '(do (def ^:dynamic *foo*)
+               (binding [*foo* 3]
+                 *foo*)))))
   (is (= 3 (e/eval
             '(do (defprotocol Foo
                    (blah
