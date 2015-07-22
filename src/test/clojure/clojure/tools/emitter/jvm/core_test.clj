@@ -70,6 +70,12 @@
   (is (= {:a :b} (meta (e/eval '(let [x 3] ^{:a :b} {:a x})))))
   (is (= Double/MAX_VALUE (e/eval 'Double/MAX_VALUE)))
   (is (e/eval '(instance? java.lang.String "aaaaa")))
+  (is (= (apply + (range 50))
+         (e/eval '(loop [acc 0
+                         col (range 50)]
+                    (if-not (empty? col)
+                      (recur (+ acc (first col)) (rest col))
+                      acc)))))
   (is (= 3 (e/eval
             '(do (defprotocol Foo
                    (blah
