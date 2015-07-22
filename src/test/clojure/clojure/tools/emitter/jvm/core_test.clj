@@ -60,6 +60,11 @@
           '(do (def ^:dynamic *foo*)
                (binding [*foo* 3]
                  *foo*)))))
+  (is (= (apply + (range 3))
+         (e/eval
+          '(do (defmacro mapply [e & args]
+                 `(~e ~@(butlast args) ~@(last args)))
+               (mapply + 0 1 2 nil)))))
   (is (= 3 (e/eval
             '(do (defprotocol Foo
                    (blah
