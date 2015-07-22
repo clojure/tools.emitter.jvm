@@ -37,6 +37,12 @@
                          (catch Exception e :catch)
                          (finally (reset! x :finally)))
                     @x))))
+  (is (= 12
+         (e/eval '(letfn [(six-times [y]
+                            (* (twice y) 3))
+                          (twice [x]
+                            (* x 2))]
+                    (six-times 2)))))
   (let [f (e/eval
            '(fn [x]
               (case x
