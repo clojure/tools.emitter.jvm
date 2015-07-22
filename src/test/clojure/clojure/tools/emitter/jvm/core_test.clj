@@ -76,6 +76,7 @@
                     (if-not (empty? col)
                       (recur (+ acc (first col)) (rest col))
                       acc)))))
+  (is (= Double (e/eval 'Double)))
   (is (= 3 (e/eval
             '(do (defprotocol Foo
                    (blah
