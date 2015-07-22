@@ -68,6 +68,7 @@
   (is (= [:a 5] (e/eval '(let [x 5] [:a x]))))
   (is (= #{:a :b} (e/eval '(let [x :b] #{:a x}))))
   (is (= {:a :b} (meta (e/eval '(let [x 3] ^{:a :b} {:a x})))))
+  (is (= Double/MAX_VALUE (e/eval 'Double/MAX_VALUE)))
   (is (= 3 (e/eval
             '(do (defprotocol Foo
                    (blah
