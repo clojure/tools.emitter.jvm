@@ -76,6 +76,12 @@
                     (if-not (empty? col)
                       (recur (+ acc (first col)) (rest col))
                       acc)))))
+  (is (= 3 (e/eval '(do (let [x (Object.)]
+                          (locking x
+                            (println "Got lock!")
+                            (Thread/sleep 1)
+                            (println "Done with lock!")))
+                        3))))
   (is (= Double (e/eval 'Double)))
   (is (= 3 (e/eval
             '(do (defprotocol Foo
