@@ -103,5 +103,5 @@
               (set! VictimClass/foo (new Object))
               (not= *v* System/out))))))
 
-;; (deftest load-core-test
-;;   (is (= nil (e/load "/clojure.core"))))
+(deftest load-core-test
+  (is (= nil (e/load "/clojure.core"))))
