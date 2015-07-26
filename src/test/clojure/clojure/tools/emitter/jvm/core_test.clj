@@ -1,7 +1,8 @@
 (ns clojure.tools.emitter.jvm.core-test
   (:require [clojure.tools.emitter.jvm :as e]
             [clojure.test :refer :all]
-            [clojure.tools.analyzer.passes :refer [schedule]]))
+            [clojure.tools.analyzer.passes :refer [schedule]])
+  (:import [clojure.tools.emitter.jvm VictimClass]))
 
 (deftest eval-test
   (is (= 1 (e/eval 1)))
@@ -30,6 +31,7 @@
          (meta (e/eval '(with-meta [:c :d] {:a :b})))))
   (is (= :catch
          (e/eval '(try (throw (Exception. "Foo!"))
+                       (catch AssertionError e :assertion)
                        (catch Exception e :catch)))))
   (is (= :finally
          (e/eval '(let [x (atom 0)]
@@ -91,9 +93,15 @@
                    (blah r 3))))))
   (is (= 3 (e/eval
             '(do (deftype AType [x])
-                 (.x (AType. 3)))))))
-
-
+                 (.x (AType. 3))))))
+  (is (e/eval
+       '(do (set! *unchecked-math* true)
+            *unchecked-math*)))
+  (is (e/eval
+       '(do (import '[clojure.tools.emitter.jvm VictimClass])
+            (let [*v* VictimClass/foo]
+              (set! VictimClass/foo (new Object))
+              (not= *v* System/out))))))
 
 ;; (deftest load-core-test
 ;;   (is (= nil (e/load "/clojure.core"))))
