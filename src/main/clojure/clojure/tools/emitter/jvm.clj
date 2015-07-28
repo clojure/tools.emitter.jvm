@@ -113,7 +113,8 @@
           :or {debug?        false
                emit-opts     {}
                analyze-opts  a/default-passes-opts
-               compile-files false
+               compile-files (if (bound? #'clojure.core/*compile-files*)
+                               *compile-files* false)
                class-loader  (clojure.lang.RT/makeClassLoader)}
           :as options}]
    {:pre [(instance? DynamicClassLoader class-loader)]}
@@ -171,7 +172,8 @@
   ([res {:keys [debug? eval-opts class-loader compile-files]
          :or   {debug?        false
                 eval-opts     {}
-                compile-files false
+                compile-files (if (bound? #'clojure.core/*compile-files*)
+                                *compile-files* false)
                 class-loader  (clojure.lang.RT/makeClassLoader)}
          :as options}]
    (let [p      (str (apply str (replace {\. \/ \- \_} res)) ".clj")
