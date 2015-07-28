@@ -981,31 +981,31 @@
   (let [to-clear? (and to-clear?
                        (not (primitive? o-tag)))]
     (cond
-     (closed-overs name)
-     `[[:load-this]
-       ~[:get-field class name o-tag]
-       ~@(when to-clear?
-           [[:load-this]
-            [:insn :ACONST_NULL]
-            [:put-field class name o-tag]])]
+      (closed-overs name)
+      `[[:load-this]
+        ~[:get-field class name o-tag]
+        ~@(when to-clear?
+            [[:load-this]
+             [:insn :ACONST_NULL]
+             [:put-field class name o-tag]])]
 
-     (= :arg local)
-     `[[:load-arg ~arg-id]
-       ~@(when to-clear?
-           [[:insn :ACONST_NULL]
-            [:store-arg arg-id]])]
+      (= :arg local)
+      `[[:load-arg ~arg-id]
+        ~@(when to-clear?
+            [[:insn :ACONST_NULL]
+             [:store-arg arg-id]])]
 
-     (= :fn local)
-     [[:var-insn :clojure.lang.AFunction/ILOAD 0]]
+      (= :fn local)
+      [[:var-insn :clojure.lang.AFunction/ILOAD 0]]
 
-     (= :this local)
-     [[:var-insn :clojure.lang.Object/ILOAD 0]]
+      (= :this local)
+      [[:var-insn :clojure.lang.Object/ILOAD 0]]
 
-     :else
-     `[~[:var-insn (keyword (.getName ^Class o-tag) "ILOAD") name]
-       ~@(when to-clear?
-           [[:insn :ACONST_NULL]
-            [:var-insn (keyword (.getName ^Class o-tag) "ISTORE") name]])])))
+      :else
+      `[~[:var-insn (keyword (.getName ^Class o-tag) "ILOAD") name]
+        ~@(when to-clear?
+            [[:insn :ACONST_NULL]
+             [:var-insn (keyword (.getName ^Class o-tag) "ISTORE") name]])])))
 
 (defmethod -emit-set! :local
   [{:keys [target val env]} {:keys [class] :as frame}]
