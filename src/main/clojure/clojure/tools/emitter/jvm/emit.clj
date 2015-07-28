@@ -894,9 +894,9 @@
           [:mark ~loop-label]
           ~@(emit-line-number env loop-label)
           ~@(emit body (assoc frame
-                         :loop-label  loop-label
-                         :loop-locals params
-                         :params      params))
+                              :loop-label  loop-label
+                              :loop-locals params
+                              :params      params))
           [:mark ~end-label]
           [:return-value]
           [:end-method]]]
