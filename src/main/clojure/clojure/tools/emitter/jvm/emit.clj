@@ -911,10 +911,11 @@
                         :java.lang.Object]
             :code      `[[:start-method]
                          [:load-this]
-                         ~@(mapcat (fn [{:keys [tag]} id]
-                                     `[~[:load-arg id]
+                         ~@(mapcat (fn [tag id]
+                                     `[[:load-arg ~id]
                                        ~@(emit-cast Object tag)])
-                                   params (range))
+                                   arg-tags
+                                   (range))
                          ~[:invoke-virtual (into [(keyword class "invokePrim")] arg-tags) return-type]
                          ~@(emit-cast return-type Object)
                          [:return-value]
