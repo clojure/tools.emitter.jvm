@@ -975,7 +975,8 @@
           (emit-internal-methods internal-methods (assoc frame :params params)))]))
 
 (defmethod -emit :local
-  [{:keys [to-clear? local name tag o-tag arg-id]}
+  [{:keys [to-clear? local name tag o-tag arg-id]
+    :or   {o-tag java.lang.Object}}
    {:keys [closed-overs class] :as frame}]
   (let [to-clear? (and to-clear?
                        (not (primitive? o-tag)))]
