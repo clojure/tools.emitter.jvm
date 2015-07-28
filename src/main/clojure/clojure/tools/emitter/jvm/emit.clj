@@ -45,11 +45,11 @@
 (defn emit-cast
   ([tag cast] (emit-cast tag cast false))
   ([tag cast unchecked?]
-     (if (not (or (primitive? tag)
+   (if (not (or (primitive? tag)
                 (primitive? cast)))
-       (when-not (#{Void Void/TYPE} cast)
-         [[:check-cast cast]])
-       (emit-box tag cast unchecked?))))
+     (when-not (#{Void Void/TYPE} cast)
+       [[:check-cast (or cast java.lang.Object)]])
+     (emit-box tag cast unchecked?))))
 
 (defn emit-pop [tag]
   (if (#{Double/TYPE Long/TYPE} tag)
@@ -474,10 +474,13 @@
        :java.lang.Object]]))
 
 (defmethod -emit :instance-call
-  [{:keys [env o-tag validated? args method ^Class class instance to-clear?]} frame]
+  [{:keys [env o-tag validated? args method ^Class class instance to-clear?]
+    :or   {^Class class java.lang.Object}} frame]
   (if validated?
     `[~@(emit-line-number env)
       ~@(emit (assoc instance :tag class) frame)
+      ~@(when (not= class java.lang.Object)
+          [[:check-cast class]])
       ~@(mapcat #(emit % frame) args)
       ~@(when to-clear?
           [[:insn :ACONST_NULL]
@@ -487,6 +490,8 @@
           :invoke-virtual)
        [~(keyword (.getName class) (str method)) ~@(mapv :tag args)] ~o-tag]]
     `[~@(emit instance frame)
+      ~@(when (not= class java.lang.Object)
+          [[:check-cast class]])
       [:push ~(str method)]
       ~@(emit-as-array args frame)
       ~@(when to-clear?
@@ -540,14 +545,16 @@
 (defn emit-args-and-invoke
   ([args frame] (emit-args-and-invoke args frame false))
   ([args {:keys [to-clear?] :as frame} proto?]
-     (let [frame (dissoc frame :to-clear?)]
-       `[~@(mapcat #(emit % frame) (take 19 args))
-         ~@(when-let [args (seq (drop 19 args))]
-             (emit-as-array args frame))
-         ~@(when to-clear?
-             [[:insn :ACONST_NULL]
-              [:var-insn :clojure.lang.Object/ISTORE 0]])
-         [:invoke-interface [:clojure.lang.IFn/invoke ~@(repeat (min 20 (count args)) :java.lang.Object) ~@(when proto? [:java.lang.Object])] :java.lang.Object]])))
+   (let [frame (dissoc frame :to-clear?)]
+     `[~@(mapcat #(emit % frame) (take 19 args))
+       ~@(when-let [args (seq (drop 19 args))]
+           (emit-as-array args frame))
+       ~@(when to-clear?
+           [[:insn :ACONST_NULL]
+            [:var-insn :clojure.lang.Object/ISTORE 0]])
+       [:invoke-interface [:clojure.lang.IFn/invoke
+                           ~@(repeat (min 20 (count args)) :java.lang.Object)
+                           ~@(when proto? [:java.lang.Object])] :java.lang.Object]])))
 
 (defmethod -emit :invoke
   [{:keys [fn args env to-clear?]} frame]
@@ -884,13 +891,9 @@
         code
         `[[:start-method]
           [:local-variable :this :clojure.lang.AFunction nil ~loop-label ~end-label :this]
-          ~@(mapcat (fn [{:keys [name arg-id o-tag tag]}]
-                      `[~[:local-variable name tag nil loop-label end-label name]
-                        ~@(when-not (= tag o-tag)
-                            [[:load-arg arg-id]
-                             [:check-cast tag]
-                             [:store-arg arg-id]])])
-                  params)
+          ~@(mapcat (fn [{:keys [name tag]}]
+                      `[[:local-variable ~name :java.lang.Object nil ~loop-label ~end-label ~name]])
+                    params)
           [:mark ~loop-label]
           ~@(emit-line-number env loop-label)
           ~@(emit body (assoc frame
@@ -1200,7 +1203,8 @@
                         {:object o}))))))
 
 (defn emit-constants [{:keys [class constants]}]
-  (mapcat (fn [{:keys [val id tag type]}]
+  (mapcat (fn [{:keys [val id tag type]
+                :or   {tag java.lang.Object}}]
             `[~@(emit-value (or type (u/classify val)) val)
               [:check-cast ~tag]
               ~[:put-static class (str "const__" id) tag]])
