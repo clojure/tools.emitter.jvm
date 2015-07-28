@@ -869,10 +869,14 @@
         primitive?             (some primitive? tags)
 
         method-name            (cond
-                                variadic? :doInvoke
-                                primitive? :invokePrim
-                                :else
-                                :invoke)
+                                 variadic?
+                                 ,,:doInvoke
+                                 
+                                 primitive?
+                                 ,,:invokePrim
+                                 
+                                 :else
+                                 ,,:invoke)
 
         ;; arg-types
         [loop-label end-label] (repeatedly label)
