@@ -981,7 +981,7 @@
   (let [to-clear? (and to-clear?
                        (not (primitive? o-tag)))]
     (cond
-      (closed-overs name)
+      (get closed-overs name)
       `[[:load-this]
         ~[:get-field class name o-tag]
         ~@(when to-clear?
