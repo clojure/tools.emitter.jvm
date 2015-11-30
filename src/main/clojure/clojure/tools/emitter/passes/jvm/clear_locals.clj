@@ -78,8 +78,7 @@
 (defmethod -clear-locals :default
   [{:keys [closed-overs op loop-id] :as ast}]
   (if closed-overs
-    (let [key (if (= :loop op) :loop-closed-overs ) ;; if we're in a loop those are not actually closed-overs
-          [ast body-locals] (binding [*clears* (atom (if (= :loop op)
+    (let [[ast body-locals] (binding [*clears* (atom (if (= :loop op)  ;; if we're in a loop those are not actually closed-overs
                                                        (assoc-in @*clears* [:loop-closed-overs loop-id] closed-overs)
                                                        (update-in @*clears* [:closed-overs] merge closed-overs)))] ;; clear locals in the body
                               [(update-children ast -clear-locals rseqv) (:locals @*clears*)])        ;; and save encountered locals
