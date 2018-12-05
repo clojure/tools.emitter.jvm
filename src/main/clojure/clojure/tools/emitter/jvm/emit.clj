@@ -11,7 +11,6 @@
   (:require [clojure.tools.analyzer.utils :as u]
             [clojure.tools.analyzer.jvm.utils :refer [primitive? numeric? box prim-or-obj] :as j.u]
             [clojure.string :as s]
-            [clojure.tools.emitter.jvm.transform :as t]
             [clojure.tools.emitter.jvm.intrinsics :refer [intrinsic intrinsic-predicate]])
   (:import clojure.lang.Reflector))
 
@@ -52,32 +51,33 @@
          [[:check-cast cast]])
        (emit-box tag cast unchecked?))))
 
-(defn emit
-  "(emit ast)
-   (emit ast emit-options-map)
+(defn emit-pop [tag]
+  (if (#{Double/TYPE Long/TYPE} tag)
+    [:pop2]
+    [:pop]))
 
-  AST is an analyzed, macroexpanded t.a.jvm AST. emit-options-map is a
-  map, the following values of which are significant. Returns a
-  bytecode descriptor vector for the last compile class annotated with
-  class metadata. All compiled classes are loaded into the
-  class-loader (defaulting to the standard Clojure classloader) for
-  side-effects.
+(def ^:dynamic *classes*)
+
+(defn emit
+  "(λ AST) → Bytecode
+  (λ AST → Options) → Bytecode
+
+  AST is an analyzed, macroexpanded t.a.jvm AST. Options is a map, the
+  following values of which are significant. Returns a (potentially
+  empty) sequence of bytecodes. *classes* must be bound before calling
+  emit.
 
   Options
   -----------
   :debug? :- (Option bool)
-    Controls development debug level printing throughout code generation.
-  
-  :class-loader :- (Option classloader)
-    A classloader instance which will be used for loading the resulting
-    bytecode into the host JVM."
+    Controls development debug level printing throughout code generation."
 
   ([ast]
      (emit ast {}))
 
   ([{:keys [env o-tag tag op type unchecked?] :as ast} frame]
      (let [bytecode (-emit ast frame)
-           statement? (= :statement (:context env))
+           statement? (= :ctx/statement (:context env))
            m (meta bytecode)]
        (if statement?
          (if (:const m)
@@ -86,9 +86,7 @@
                  (when (and (not (:untyped m))
                             (not (:container m))
                             (not= Void/TYPE tag))
-                   (if (#{Double/TYPE Long/TYPE} tag)
-                     [[:pop2]]
-                     [[:pop]]))))
+                   [(emit-pop tag)])))
          (into bytecode
                `[~@(when (and (not (:container m))
                               (or (:untyped m)
@@ -97,6 +95,27 @@
                  ~@(when (and (not= tag o-tag)
                               (not= :const op))
                      (emit-cast o-tag tag unchecked?))])))))
+
+(defn emit-classes
+  "(λ AST) → (Seq Class-AST)
+  (λ AST → Options) → (Seq Class-AST)
+
+  Compiles the given AST into potentially several classes, returning a
+  sequence of ASTs defining classes.
+
+  Options
+  -----------
+  :debug :- (Option bool)
+    Controls developlent debug level printing throughout code generation."
+
+  ([ast]
+     (emit-classes ast {}))
+
+  ([ast opts]
+     (binding [*classes* (atom {:classes []
+                                :ids     #{}})]
+       (emit ast opts)
+       (:classes @*classes*))))
 
 (defmethod -emit :import
   [{:keys [class]} frame]
@@ -278,7 +297,7 @@
     `^:container
     [[:mark ~start-label]
      ~@(emit body frame)
-     ~@(when (not= :statement context)
+     ~@(when (not= :ctx/statement context)
          [[:astore ret-local]])
      [:mark ~end-label]
      ~@(when finally
@@ -290,7 +309,7 @@
           `[[:mark ~start-label]
             [:astore ~(:name local)]
             ~@(emit body frame)
-            ~@(when (not= :statement context)
+            ~@(when (not= :ctx/statement context)
                 [[:astore ret-local]])
             [:mark ~end-label]
             ~@(when finally
@@ -305,7 +324,7 @@
            [:throw-exception]])
 
      [:mark ~ret-label]
-     ~@(when (not= :statement context)
+     ~@(when (not= :ctx/statement context)
          `[[:aload ~ret-local]])
      [:mark ~(label)]
 
@@ -418,23 +437,25 @@
   (let [m (str (.getMethod class (name method) (into-array Class (mapv :tag args))))]
     (if false-label
       (when-let [ops (intrinsic-predicate m)]
-        (conj (mapv (fn [op] [:insn op]) (butlast ops))
-              [:jump-insn (last ops) false-label]))
+        (with-meta (conj (mapv (fn [op] [:insn op]) (butlast ops))
+                         [:jump-insn (last ops) false-label])
+          {:intrinsic-predicate true}))
       (when-let [ops (intrinsic m)]
         (mapv (fn [op] [:insn op]) ops)))))
 
 (defmethod -emit :static-call
   [{:keys [env o-tag validated? args method ^Class class false-label to-clear?] :as ast} frame]
   (if validated?
-    `[~@(emit-line-number env)
-      ~@(mapcat #(emit % frame) args)
-      ~@(or
-         (emit-intrinsic ast)
-         `[~@(when to-clear?
-               [[:insn :ACONST_NULL]
-                [:var-insn :clojure.lang.Object/ISTORE 0]])
-           [:invoke-static [~(keyword (.getName class) (str method))
-                            ~@(mapv :tag args)] ~o-tag]])]
+    (let [intrinsic (emit-intrinsic ast)]
+      `^{:intrinsic-predicate ~(-> intrinsic meta :intrinsic-predicate)}
+      [~@(emit-line-number env)
+       ~@(mapcat #(emit % frame) args)
+       ~@(or intrinsic
+             `[~@(when to-clear?
+                   [[:insn :ACONST_NULL]
+                    [:var-insn :clojure.lang.Object/ISTORE 0]])
+               [:invoke-static [~(keyword (.getName class) (str method))
+                                ~@(mapv :tag args)] ~o-tag]])])
     `[[:push ~(.getName class)]
       [:invoke-static [:java.lang.Class/forName :java.lang.String] :java.lang.Class]
       [:push ~(str method)]
@@ -495,8 +516,7 @@
     `^:container
     [~@(emit-line-number env)
      ~@test-expr
-     ~@(when (not (and (= :static-call (:op test))
-                     (= :jump-insn (first (last test-expr)))))
+     ~@(when (not (:intrinsic-predicate (meta test-expr)))
          (if (not= (:tag test) Boolean/TYPE)
            [[:dup]
             [:if-null null-label]
@@ -688,8 +708,9 @@
 (defn emit-bindings [bindings labels frame]
   (mapcat (fn [{:keys [init to-clear? tag name] :as binding} label]
             `[~@(emit init frame)
-              ~@(when-not to-clear?
-                  [[:var-insn (keyword (.getName ^Class tag) "ISTORE") name]])
+              ~(if to-clear?
+                 (emit-pop tag)
+                 [:var-insn (keyword (.getName ^Class tag) "ISTORE") name])
               ~@(when label
                   [[:mark label]])])
           bindings labels))
@@ -739,11 +760,10 @@
   (mapv
    (fn [{:keys [init tag name] :as binding}]
      (let [init (emit init frame)
-           class-name (.getName ^Class (:class (meta init)))]
-       `[~class-name
-         [~@init
-          [:var-insn ~(keyword (.getName ^Class tag) "ISTORE")
-           ~name]]]))
+           class-name (-> init first second)] ;; weak
+       [class-name
+        `[~@init
+          [:var-insn ~(keyword (.getName ^Class tag) "ISTORE") ~name]]]))
    bindings))
 
 (defmethod -emit :letfn
@@ -1128,247 +1148,245 @@
 ;; TODO: generalize this for deftype/reify: needs  mutable field handling + altCtor + annotations
 ;; add smap
 
-(let [class-cache (atom {})]
-  (defn emit-class
-    [{:keys [class-name meta methods variadic? constants closed-overs keyword-callsites
-             protocol-callsites env annotations super interfaces op fields class-id]
-      :as ast}
-     {:keys [debug? class-loader] :as frame}]
-    (let [old-frame frame
+(defn emit-class
+  [{:keys [class-name meta methods variadic? constants closed-overs keyword-callsites
+           protocol-callsites env annotations super interfaces op fields class-id]
+    :as ast}
+   {:keys [debug? class-loader] :as frame}]
+  (let [old-frame          frame
 
-          constants (into {}
-                          (remove #(let [{:keys [tag type]} (val %)]
-                                     (or (primitive? tag)
-                                         (#{:string :bool} type)))
-                                  constants))
+        constants          (into {}
+                                 (remove #(let [{:keys [tag type]} (val %)]
+                                            (or (primitive? tag)
+                                                (#{:string :bool} type)))
+                                         constants))
 
-          consts (vals constants)
-          constant-table (zipmap (mapv :id consts) consts)
+        consts             (vals constants)
+        constant-table     (zipmap (mapv :id consts) consts)
 
-          frame (merge frame
-                       {:class              class-name
-                        :constants          constants
-                        :constant-table     constant-table
-                        :closed-overs       closed-overs
-                        :keyword-callsites  keyword-callsites
-                        :protocol-callsites protocol-callsites})
+        frame              (merge frame
+                                  {:class              class-name
+                                   :constants          constants
+                                   :constant-table     constant-table
+                                   :closed-overs       closed-overs
+                                   :keyword-callsites  keyword-callsites
+                                   :protocol-callsites protocol-callsites})
 
-          consts (mapv (fn [{:keys [id tag]}]
-                         {:op   :field
-                          :attr #{:public :final :static}
-                          :name (str "const__" id)
-                          :tag  tag})
-                       consts)
+        consts             (mapv (fn [{:keys [id tag]}]
+                                   {:op   :field
+                                    :attr #{:public :final :static}
+                                    :name (str "const__" id)
+                                    :tag  tag})
+                                 consts)
 
-          meta-field (when meta
-                       [{:op   :field
-                         :attr #{:public :final}
-                         :name "__meta"
-                         :tag  clojure.lang.IPersistentMap}])
+        meta-field         (when meta
+                             [{:op   :field
+                               :attr #{:public :final}
+                               :name "__meta"
+                               :tag  clojure.lang.IPersistentMap}])
 
-          keyword-callsites (mapcat (fn [k]
-                                      (let [{:keys [id]} (constants {:form k :tag clojure.lang.Keyword :meta nil})]
-                                        [{:op   :field
-                                          :attr #{:public :final :static}
-                                          :name (str "site__" id)
-                                          :tag  clojure.lang.KeywordLookupSite}
-                                         {:op   :field
-                                          :attr #{:public :final :static}
-                                          :name (str "thunk__" id)
-                                          :tag  clojure.lang.ILookupThunk}]))
-                                    keyword-callsites)
+        keyword-callsites  (mapcat (fn [k]
+                                     (let [{:keys [id]} (constants {:form k :tag clojure.lang.Keyword :meta nil})]
+                                       [{:op   :field
+                                         :attr #{:public :final :static}
+                                         :name (str "site__" id)
+                                         :tag  clojure.lang.KeywordLookupSite}
+                                        {:op   :field
+                                         :attr #{:public :final :static}
+                                         :name (str "thunk__" id)
+                                         :tag  clojure.lang.ILookupThunk}]))
+                                   keyword-callsites)
 
-          protocol-callsites  (mapcat (fn [p]
-                                        (let [{:keys [id]} (constants {:form p :tag clojure.lang.Var :meta (clojure.core/meta p)})]
-                                          [{:op   :field
-                                            :attr #{:private :static}
-                                            :name (str "cached__class__" id)
-                                            :tag  java.lang.Class}]))
-                                      protocol-callsites)
+        protocol-callsites (mapcat (fn [p]
+                                     (let [{:keys [id]} (constants {:form p :tag clojure.lang.Var :meta (clojure.core/meta p)})]
+                                       [{:op   :field
+                                         :attr #{:private :static}
+                                         :name (str "cached__class__" id)
+                                         :tag  java.lang.Class}]))
+                                   protocol-callsites)
 
-          deftype? (= op :deftype)
-          defrecord? (contains? closed-overs '__meta)
+        deftype?           (= op :deftype)
+        defrecord?         (contains? closed-overs '__meta)
 
-          closed-overs (mapv (fn [{:keys [name local o-tag tag mutable] :as l}]
-                               (merge l
-                                      {:op   :field
-                                       :attr (when deftype?
-                                               (if mutable
-                                                 #{mutable}
-                                                 #{:public :final}))
-                                       :tag  o-tag}))
-                             (if deftype?
-                               fields ;; preserve order
-                               (vals closed-overs)))
+        closed-overs       (mapv (fn [{:keys [name local o-tag tag mutable] :as l}]
+                                   (merge l
+                                          {:op   :field
+                                           :attr (when deftype?
+                                                   (if mutable
+                                                     #{mutable}
+                                                     #{:public :final}))
+                                           :tag  o-tag}))
+                                 (if deftype?
+                                   fields ;; preserve order
+                                   (vals closed-overs)))
 
-          ctor-types (into (if meta [:clojure.lang.IPersistentMap] [])
-                           (mapv (if deftype? (comp prim-or-obj :tag) :tag) closed-overs))
+        ctor-types         (into (if meta [:clojure.lang.IPersistentMap] [])
+                                 (mapv (if deftype? (comp prim-or-obj :tag) :tag) closed-overs))
 
-          class-ctors [{:op     :method
-                        :attr   #{:public :static}
-                        :method [[:<clinit>] :void]
-                        :code   `[[:start-method]
-                                  ~@(emit-line-number env)
-                                  ~@(when (seq constants)
-                                      (emit-constants frame))
-                                  ~@(when (seq keyword-callsites)
-                                      (emit-keyword-callsites frame))
-                                  [:return-value]
-                                  [:end-method]]}
-                       (let [[start-label end-label] (repeatedly label)]
-                         {:op     :method
-                          :attr   #{:public}
-                          :method `[[:<init> ~@ctor-types] :void]
-                          :code   `[[:start-method]
-                                    ~@(emit-line-number env)
-                                    [:label ~start-label]
-                                    [:load-this]
-                                    [:invoke-constructor [~(keyword (name super) "<init>")] :void]
-                                    ~@(when meta
-                                        [[:load-this]
-                                         [:load-arg 0]
-                                         [:put-field class-name :__meta :clojure.lang.IPersistentMap]])
-                                    ~@(mapcat
-                                       (fn [{:keys [name tag]} t id]
-                                         `[[:load-this]
-                                           ~[:load-arg id]
-                                           ~@(emit-cast t tag)
-                                           ~[:put-field class-name name tag]])
-                                       closed-overs ctor-types (if meta (rest (range)) (range)))
-
-                                    [:label ~end-label]
-                                    [:return-value]
-                                    [:end-method]]})]
-
-          defrecord-ctor (when defrecord?
-                           [{:op     :method
-                             :attr   #{:public}
-                             :method `[[:<init> ~@(drop-last 2 ctor-types)] :void]
+        class-ctors        [{:op     :method
+                             :attr   #{:public :static}
+                             :method [[:<clinit>] :void]
                              :code   `[[:start-method]
-                                       [:load-this]
-                                       [:load-args]
-                                       [:insn :ACONST_NULL]
-                                       [:insn :ACONST_NULL]
-                                       [:invoke-constructor [~(keyword class-name "<init>") ~@ctor-types] :void]
+                                       ~@(emit-line-number env)
+                                       ~@(when (seq constants)
+                                           (emit-constants frame))
+                                       ~@(when (seq keyword-callsites)
+                                           (emit-keyword-callsites frame))
                                        [:return-value]
-                                       [:end-method]]}])
-
-          variadic-method (when variadic?
-                            (let [required-arity (->> methods (filter :variadic?) first :fixed-arity)]
-                              [{:op     :method
-                                :attr   #{:public}
-                                :method [[:getRequiredArity] :int]
-                                :code   `[[:start-method]
-                                          [:push ~(int required-arity)]
-                                          [:return-value]
-                                          [:end-method]]}]))
-
-          meta-methods (when meta
-                         [{:op     :method
-                           :attr   #{:public}
-                           :method `[[:<init> ~@(rest ctor-types)] :void]
-                           :code   `[[:start-method]
-                                     [:load-this]
-                                     [:insn :ACONST_NULL]
-                                     [:load-args]
-                                     [:invoke-constructor [~(keyword class-name "<init>")
-                                                           ~@ctor-types] :void]
-                                     [:return-value]
-                                     [:end-method]]}
-                          {:op     :method
-                           :attr   #{:public}
-                           :method`[[:meta] :clojure.lang.IPersistentMap]
-                           :code   [[:start-method]
-                                    [:load-this]
-                                    [:get-field class-name :__meta :clojure.lang.IPersistentMap]
-                                    [:return-value]
-                                    [:end-method]]}
-                          {:op     :method
-                           :attr   #{:public}
-                           :method`[[:withMeta :clojure.lang.IPersistentMap] :clojure.lang.IObj]
-                           :code   `[[:start-method]
-                                     [:new-instance ~class-name]
-                                     [:dup]
-                                     [:load-arg 0]
-                                     ~@(mapcat
-                                        (fn [{:keys [name tag]}]
-                                          [[:load-this]
-                                           [:get-field class-name name tag]])
-                                        closed-overs)
-                                     [:invoke-constructor [~(keyword class-name "<init>")
-                                                           ~@ctor-types] :void]
-                                     [:return-value]
-                                     [:end-method]]}])
-
-          deftype-fields (vec (remove '#{__meta __extmap} (mapv :form closed-overs)))
-
-          deftype-methods (when deftype?
-                            `[~{:op     :method
-                                :attr   #{:public :static}
-                                :method [[:getBasis] :clojure.lang.IPersistentVector]
-                                :code   `[[:start-method]
-                                          ~@(emit-value :vector (mapv munge deftype-fields))
-                                          [:return-value]
-                                          [:end-method]]}
-                              ~@(when defrecord?
-                                  [{:op     :method
-                                    :attr   #{:public :static}
-                                    :method [[:create :clojure.lang.IPersistentMap] class-name]
-                                    :code   `[[:start-method]
-                                              ~@(mapcat
-                                                 (fn [field id]
-                                                   `[[:load-arg 0]
-                                                     ~@(emit-value :keyword field)
-                                                     [:insn :ACONST_NULL]
-                                                     [:invoke-interface [:clojure.lang.IPersistentMap/valAt :java.lang.Object :java.lang.Object] :java.lang.Object]
-                                                     [:astore ~id]
-                                                     [:load-arg 0]
-                                                     ~@(emit-value :keyword field)
-                                                     [:invoke-interface [:clojure.lang.IPersistentMap/without :java.lang.Object] :clojure.lang.IPersistentMap]
-                                                     [:store-arg 0]])
-                                                 deftype-fields (rest (range)))
-                                              [:new-instance ~class-name]
-                                              [:dup]
-                                              ~@(for [i (rest (range (inc (count deftype-fields))))]
-                                                  [:var-insn :java.lang.Object/ILOAD i])
-                                              [:insn :ACONST_NULL]
+                                       [:end-method]]}
+                            (let [[start-label end-label] (repeatedly label)]
+                              {:op     :method
+                               :attr   #{:public}
+                               :method `[[:<init> ~@ctor-types] :void]
+                               :code   `[[:start-method]
+                                         ~@(emit-line-number env)
+                                         [:label ~start-label]
+                                         [:load-this]
+                                         [:invoke-constructor [~(keyword (name super) "<init>")] :void]
+                                         ~@(when meta
+                                             [[:load-this]
                                               [:load-arg 0]
-                                              [:invoke-static [:clojure.lang.RT/seqOrElse :java.lang.Object] :java.lang.Object]
-                                              [:invoke-constructor [~(keyword class-name "<init>")
-                                                                    ~@ctor-types] :void]
-                                              [:return-value]
-                                              [:end-method]]}])])
+                                              [:put-field class-name :__meta :clojure.lang.IPersistentMap]])
+                                         ~@(mapcat
+                                            (fn [{:keys [name tag]} t id]
+                                              `[[:load-this]
+                                                ~[:load-arg id]
+                                                ~@(emit-cast t tag)
+                                                ~[:put-field class-name name tag]])
+                                            closed-overs ctor-types (if meta (rest (range)) (range)))
 
-          jvm-ast
-          {:op          :class
-           :debug?      debug?
-           :attr        #{:public :super :final}
-           :annotations annotations
-           :name        (s/replace class-name \. \/)
-           :super       (s/replace (name super) \. \/)
-           :interfaces  interfaces
-           :fields      `[~@consts ~@ keyword-callsites
-                          ~@meta-field ~@closed-overs ~@protocol-callsites]
-           :methods     `[~@class-ctors ~@defrecord-ctor ~@deftype-methods
-                          ~@variadic-method ~@meta-methods
-                          ~@(mapcat #(-emit % frame) methods)]}
-          class (or (@class-cache class-id)
-                    (let [class (.defineClass ^clojure.lang.DynamicClassLoader class-loader class-name (t/-compile jvm-ast) nil)]
-                      (when class-id
-                        (swap! class-cache assoc class-id class))
-                      class))]
-      (if deftype?
-        [[:insn :ACONST_NULL]]
-        (with-meta
-          `[[:new-instance ~class-name]
-            [:dup]
-            ~@(when meta
-                [[:insn :ACONST_NULL]])
-            ~@(mapcat #(emit (assoc % :op :local) old-frame)
-                      closed-overs)
-            [:invoke-constructor [~(keyword class-name "<init>")
-                                  ~@ctor-types] :void]]
-          {:class class})))))
+                                         [:label ~end-label]
+                                         [:return-value]
+                                         [:end-method]]})]
+
+        defrecord-ctor     (when defrecord?
+                             [{:op     :method
+                               :attr   #{:public}
+                               :method `[[:<init> ~@(drop-last 2 ctor-types)] :void]
+                               :code   `[[:start-method]
+                                         [:load-this]
+                                         [:load-args]
+                                         [:insn :ACONST_NULL]
+                                         [:insn :ACONST_NULL]
+                                         [:invoke-constructor [~(keyword class-name "<init>") ~@ctor-types] :void]
+                                         [:return-value]
+                                         [:end-method]]}])
+
+        variadic-method    (when variadic?
+                             (let [required-arity (->> methods (filter :variadic?) first :fixed-arity)]
+                               [{:op     :method
+                                 :attr   #{:public}
+                                 :method [[:getRequiredArity] :int]
+                                 :code   `[[:start-method]
+                                           [:push ~(int required-arity)]
+                                           [:return-value]
+                                           [:end-method]]}]))
+
+        meta-methods       (when meta
+                             [{:op     :method
+                               :attr   #{:public}
+                               :method `[[:<init> ~@(rest ctor-types)] :void]
+                               :code   `[[:start-method]
+                                         [:load-this]
+                                         [:insn :ACONST_NULL]
+                                         [:load-args]
+                                         [:invoke-constructor [~(keyword class-name "<init>")
+                                                               ~@ctor-types] :void]
+                                         [:return-value]
+                                         [:end-method]]}
+                              {:op     :method
+                               :attr   #{:public}
+                               :method`[[:meta] :clojure.lang.IPersistentMap]
+                               :code   [[:start-method]
+                                        [:load-this]
+                                        [:get-field class-name :__meta :clojure.lang.IPersistentMap]
+                                        [:return-value]
+                                        [:end-method]]}
+                              {:op     :method
+                               :attr   #{:public}
+                               :method`[[:withMeta :clojure.lang.IPersistentMap] :clojure.lang.IObj]
+                               :code   `[[:start-method]
+                                         [:new-instance ~class-name]
+                                         [:dup]
+                                         [:load-arg 0]
+                                         ~@(mapcat
+                                            (fn [{:keys [name tag]}]
+                                              [[:load-this]
+                                               [:get-field class-name name tag]])
+                                            closed-overs)
+                                         [:invoke-constructor [~(keyword class-name "<init>")
+                                                               ~@ctor-types] :void]
+                                         [:return-value]
+                                         [:end-method]]}])
+
+        deftype-fields     (vec (remove '#{__meta __extmap} (mapv :form closed-overs)))
+
+        deftype-methods    (when deftype?
+                             `[~{:op     :method
+                                 :attr   #{:public :static}
+                                 :method [[:getBasis] :clojure.lang.IPersistentVector]
+                                 :code   `[[:start-method]
+                                           ~@(emit-value :vector (mapv munge deftype-fields))
+                                           [:return-value]
+                                           [:end-method]]}
+                               ~@(when defrecord?
+                                   [{:op     :method
+                                     :attr   #{:public :static}
+                                     :method [[:create :clojure.lang.IPersistentMap] class-name]
+                                     :code   `[[:start-method]
+                                               ~@(mapcat
+                                                  (fn [field id]
+                                                    `[[:load-arg 0]
+                                                      ~@(emit-value :keyword field)
+                                                      [:insn :ACONST_NULL]
+                                                      [:invoke-interface [:clojure.lang.IPersistentMap/valAt :java.lang.Object :java.lang.Object] :java.lang.Object]
+                                                      [:astore ~id]
+                                                      [:load-arg 0]
+                                                      ~@(emit-value :keyword field)
+                                                      [:invoke-interface [:clojure.lang.IPersistentMap/without :java.lang.Object] :clojure.lang.IPersistentMap]
+                                                      [:store-arg 0]])
+                                                  deftype-fields (rest (range)))
+                                               [:new-instance ~class-name]
+                                               [:dup]
+                                               ~@(for [i (rest (range (inc (count deftype-fields))))]
+                                                   [:var-insn :java.lang.Object/ILOAD i])
+                                               [:insn :ACONST_NULL]
+                                               [:load-arg 0]
+                                               [:invoke-static [:clojure.lang.RT/seqOrElse :java.lang.Object] :java.lang.Object]
+                                               [:invoke-constructor [~(keyword class-name "<init>")
+                                                                     ~@ctor-types] :void]
+                                               [:return-value]
+                                               [:end-method]]}])])
+
+        jvm-ast            {:op          :class
+                            :debug?      debug?
+                            :attr        #{:public :super :final}
+                            :annotations annotations
+                            :class-name  class-name
+                            :name        (s/replace class-name \. \/)
+                            :super       (s/replace (name super) \. \/)
+                            :interfaces  interfaces
+                            :fields      (concat consts keyword-callsites
+                                                 meta-field closed-overs protocol-callsites)
+                            :methods     (concat class-ctors defrecord-ctor deftype-methods
+                                                 variadic-method meta-methods
+                                                 (mapcat #(-emit % frame) methods))}]
+
+    (or (get-in @*classes* [:ids class-id])
+        (swap! *classes* update-in [:classes] conj jvm-ast)
+        (when class-id
+          (swap! *classes* update-in [:ids] conj class-id)))
+
+    (if deftype?
+      [[:insn :ACONST_NULL]]
+      `[[:new-instance ~class-name]
+        [:dup]
+        ~@(when meta
+            [[:insn :ACONST_NULL]])
+        ~@(mapcat #(emit (assoc % :op :local) old-frame)
+                  closed-overs)
+        [:invoke-constructor [~(keyword class-name "<init>")
+                              ~@ctor-types] :void]])))
 
 (defmethod -emit :reify
   [{:keys [class-name] :as ast}
